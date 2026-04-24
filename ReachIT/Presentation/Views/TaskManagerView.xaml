@@ -1,0 +1,23 @@
+<!-- Task manager workspace content. -->
+<UserControl x:Class="ReachIT.Presentation.Views.TaskManagerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <WrapPanel Margin="0,0,0,8">
+            <Button Content="Add Task" Command="{Binding AddTaskCommand}" Margin="0,0,8,0" />
+            <Button Content="Edit Task" Command="{Binding EditTaskCommand}" Margin="0,0,8,0" />
+            <Button Content="Delete Task" Command="{Binding DeleteTaskCommand}" Margin="0,0,8,0" />
+            <Button Content="Link Task To Node" Command="{Binding LinkTaskToNodeCommand}" />
+        </WrapPanel>
+
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding Tasks}"
+                 SelectedItem="{Binding SelectedTask}"
+                 DisplayMemberPath="Title" />
+    </Grid>
+</UserControl>

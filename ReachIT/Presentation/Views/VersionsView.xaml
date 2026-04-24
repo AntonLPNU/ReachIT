@@ -1,0 +1,19 @@
+<!-- Versions placeholder content. -->
+<UserControl x:Class="ReachIT.Presentation.Views.VersionsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <GroupBox Header="Project Versions" Margin="0,0,8,0">
+            <ListBox ItemsSource="{Binding ProjectVersions}" />
+        </GroupBox>
+
+        <GroupBox Header="File Versions" Grid.Column="1" Margin="8,0,0,0">
+            <ListBox ItemsSource="{Binding FileVersions}" />
+        </GroupBox>
+    </Grid>
+</UserControl>

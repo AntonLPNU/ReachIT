@@ -1,0 +1,26 @@
+<!-- Recent external files panel displayed below explorer tree. -->
+<UserControl x:Class="ReachIT.Presentation.Views.RecentExternalFilesPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Recent External Files" FontWeight="SemiBold" Margin="0,0,0,6" />
+
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding Items}"
+                 SelectedItem="{Binding SelectedItem}"
+                 DisplayMemberPath="DisplayName" />
+
+        <WrapPanel Grid.Row="2" Margin="0,6,0,0">
+            <Button Content="Attach to Project" Command="{Binding AttachToProjectCommand}" Margin="0,0,6,0" />
+            <Button Content="Copy into Project" Command="{Binding CopyIntoProjectCommand}" Margin="0,0,6,0" />
+            <Button Content="Save as Link" Command="{Binding SaveAsLinkCommand}" Margin="0,0,6,0" />
+            <Button Content="Remove from Recent" Command="{Binding RemoveFromRecentCommand}" />
+        </WrapPanel>
+    </Grid>
+</UserControl>

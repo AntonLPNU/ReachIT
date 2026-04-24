@@ -1,0 +1,13 @@
+<!-- File workspace placeholder content. -->
+<UserControl x:Class="ReachIT.Presentation.Views.FileView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <StackPanel>
+            <TextBlock Text="File View" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding SelectedNodeName, StringFormat=Selected: {0}}" Margin="0,8,0,0" />
+            <TextBlock Text="{Binding SelectedRelativePath, StringFormat=Relative: {0}}" Margin="0,4,0,0" />
+            <TextBlock Text="{Binding SelectedFullPath, StringFormat=Path: {0}}" Margin="0,4,0,0" TextWrapping="Wrap" />
+        </StackPanel>
+    </Grid>
+</UserControl>

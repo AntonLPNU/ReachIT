@@ -1,0 +1,14 @@
+// Defines focus mode start/stop and status behavior.
+using ReachIT.Domain.Enums;
+using ReachIT.Domain.Models;
+
+namespace ReachIT.Application.Contracts;
+
+public interface IFocusModeService
+{
+    bool IsActive { get; }
+    FocusModeType CurrentMode { get; }
+    Task StartAsync(FocusModeType mode = FocusModeType.Light, CancellationToken cancellationToken = default);
+    Task StopAsync(CancellationToken cancellationToken = default);
+    Task<FocusSession?> GetCurrentSessionAsync(CancellationToken cancellationToken = default);
+}

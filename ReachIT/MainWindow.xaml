@@ -3,10 +3,43 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:ReachIT"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="ReachIT Workspace"
+        Height="700"
+        Width="1200"
+        MinHeight="520"
+        MinWidth="900">
+    <Window.InputBindings>
+        <KeyBinding Key="R" Command="{Binding ToggleSidePanelCommand}" />
+    </Window.InputBindings>
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
+        <Menu Grid.Row="0">
+            <MenuItem Header="File">
+                <MenuItem Header="Open Project Folder" Command="{Binding OpenProjectCommand}" />
+                <Separator />
+                <MenuItem Header="Save" Command="{Binding SaveCommand}" />
+                <MenuItem Header="Save All" Command="{Binding SaveAllCommand}" />
+            </MenuItem>
+            <MenuItem Header="View">
+                <MenuItem Header="Task Manager" Command="{Binding OpenTaskManagerCommand}" />
+                <MenuItem Header="Statistics" Command="{Binding OpenStatisticsCommand}" />
+                <MenuItem Header="Planning" Command="{Binding OpenPlanningCommand}" />
+                <MenuItem Header="Versions" Command="{Binding OpenVersionsCommand}" />
+                <MenuItem Header="Settings" Command="{Binding OpenSettingsCommand}" />
+            </MenuItem>
+            <MenuItem Header="Focus">
+                <MenuItem Header="Start" Command="{Binding StartFocusCommand}" />
+                <MenuItem Header="Stop" Command="{Binding StopFocusCommand}" />
+            </MenuItem>
+        </Menu>
+
+        <Border Grid.Row="1" Padding="12">
+            <ContentControl Content="{Binding CurrentWorkspaceViewModel}" />
+        </Border>
     </Grid>
 </Window>
