@@ -1,5 +1,6 @@
 // Represents a logical node in the ReachIT project explorer.
 using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations.Schema;
 using ReachIT.Domain.Enums;
 
 namespace ReachIT.Domain.Models;
@@ -17,5 +18,7 @@ public class ProjectTreeNode
     public bool IsExternal { get; set; }
     public string? ExternalTargetPathOrUrl { get; set; }
     public bool IsExpanded { get; set; }
+    [NotMapped]
+    public bool IsSelected { get; set; }
     public ObservableCollection<ProjectTreeNode> Children { get; set; } = [];
 }

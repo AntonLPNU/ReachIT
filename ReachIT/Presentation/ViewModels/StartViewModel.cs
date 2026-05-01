@@ -1,5 +1,6 @@
 // Drives start menu actions before opening workspace.
 using System.IO;
+using System.Diagnostics;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
@@ -22,6 +23,8 @@ public sealed class StartViewModel : ViewModelBase
         OpenProjectCommand = new AsyncCommand(_ => OpenProjectAsync());
         CreateProjectCommand = new RelayCommand(_ => RequestCreateProject?.Invoke(this, EventArgs.Empty));
         OpenRecentProjectCommand = new AsyncCommand(p => OpenRecentProjectAsync(p as ProjectMeta));
+        RemoveRecentProjectCommand = new AsyncCommand(p => RemoveRecentProjectAsync(p as ProjectMeta));
+        OpenRecentProjectFolderCommand = new AsyncCommand(p => OpenRecentProjectFolderAsync(p as ProjectMeta));
         OpenRecentExternalFileCommand = new RelayCommand(_ =>
         {
             // TODO: Open preview/attach flow for selected recent external file.
@@ -41,6 +44,8 @@ public sealed class StartViewModel : ViewModelBase
     public ICommand OpenProjectCommand { get; }
     public ICommand CreateProjectCommand { get; }
     public ICommand OpenRecentProjectCommand { get; }
+    public ICommand RemoveRecentProjectCommand { get; }
+    public ICommand OpenRecentProjectFolderCommand { get; }
     public ICommand OpenRecentExternalFileCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand ExitCommand { get; }
@@ -100,5 +105,59 @@ public sealed class StartViewModel : ViewModelBase
         {
             CompleteOpen(opened.ProjectDirectoryPath);
         }
+    }
+
+    private async Task RemoveRecentProjectAsync(ProjectMeta? project)
+    {
+        if (project is null)
+        {
+            return;
+        }
+
+        var result = MessageBox.Show(
+            "Remove this project from recent list?",
+            "ReachIT",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        await _recentFilesService.RemoveRecentProjectAsync(project.Id).ConfigureAwait(true);
+        await LoadAsync().ConfigureAwait(true);
+    }
+
+    private async Task OpenRecentProjectFolderAsync(ProjectMeta? project)
+    {
+        if (project is null || string.IsNullOrWhiteSpace(project.ProjectDirectoryPath))
+        {
+            return;
+        }
+
+        if (!Directory.Exists(project.ProjectDirectoryPath))
+        {
+            var removeResult = MessageBox.Show(
+                "Project folder not found. Remove this item from recent list?",
+                "ReachIT",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (removeResult == MessageBoxResult.Yes)
+            {
+                await _recentFilesService.RemoveRecentProjectAsync(project.Id).ConfigureAwait(true);
+                await LoadAsync().ConfigureAwait(true);
+            }
+
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "explorer.exe",
+            Arguments = $"\"{project.ProjectDirectoryPath}\"",
+            UseShellExecute = true
+        });
     }
 }

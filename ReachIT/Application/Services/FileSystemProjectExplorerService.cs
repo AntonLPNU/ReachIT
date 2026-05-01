@@ -1,4 +1,5 @@
 // Reads project filesystem structure and builds explorer nodes.
+using System.Diagnostics;
 using System.IO;
 using ReachIT.Application.Contracts;
 using ReachIT.Domain.Enums;
@@ -110,6 +111,160 @@ public sealed class FileSystemProjectExplorerService : IFileSystemProjectExplore
         return Task.FromResult<ProjectTreeNode?>(directoryNode);
     }
 
+    public Task RenameNodeAsync(ProjectMeta project, ProjectTreeNode node, string newName, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (node.IsExternal || node.NodeType is ProjectTreeNodeType.VirtualNode or ProjectTreeNodeType.ProjectRoot)
+        {
+            throw new InvalidOperationException("This node cannot be renamed.");
+        }
+
+        if (string.IsNullOrWhiteSpace(newName) || newName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            throw new InvalidOperationException("Invalid name.");
+        }
+
+        var sourcePath = EnsureNodePathInsideProject(project, node);
+        var parentDirectory = Path.GetDirectoryName(sourcePath);
+        if (string.IsNullOrWhiteSpace(parentDirectory))
+        {
+            throw new InvalidOperationException("Unable to resolve parent directory.");
+        }
+
+        var destinationPath = Path.Combine(parentDirectory, newName.Trim());
+        if (File.Exists(destinationPath) || Directory.Exists(destinationPath))
+        {
+            throw new InvalidOperationException("A file or folder with this name already exists.");
+        }
+
+        if (node.IsDirectory)
+        {
+            Directory.Move(sourcePath, destinationPath);
+        }
+        else
+        {
+            File.Move(sourcePath, destinationPath);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteNodeAsync(ProjectMeta project, ProjectTreeNode node, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (node.IsExternal || node.NodeType is ProjectTreeNodeType.VirtualNode or ProjectTreeNodeType.ProjectRoot)
+        {
+            throw new InvalidOperationException("This node cannot be deleted.");
+        }
+
+        var targetPath = EnsureNodePathInsideProject(project, node);
+        if (!node.IsDirectory && string.Equals(Path.GetFileName(targetPath), "main.rit", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("main.rit cannot be deleted.");
+        }
+
+        if (node.IsDirectory)
+        {
+            if (!Directory.Exists(targetPath))
+            {
+                return Task.CompletedTask;
+            }
+
+            if (Directory.EnumerateFileSystemEntries(targetPath).Any())
+            {
+                throw new InvalidOperationException("Deleting non-empty folders is not supported yet. TODO: add strong-confirmation recursive delete.");
+            }
+
+            Directory.Delete(targetPath);
+            return Task.CompletedTask;
+        }
+
+        if (File.Exists(targetPath))
+        {
+            File.Delete(targetPath);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public void RevealInExplorer(ProjectTreeNode node)
+    {
+        if (node.IsExternal && !string.IsNullOrWhiteSpace(node.ExternalTargetPathOrUrl))
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = node.ExternalTargetPathOrUrl,
+                UseShellExecute = true
+            });
+            return;
+        }
+
+        if (node.IsDirectory)
+        {
+            if (!Directory.Exists(node.FullPath))
+            {
+                throw new InvalidOperationException("Folder does not exist.");
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"\"{node.FullPath}\"",
+                UseShellExecute = true
+            });
+            return;
+        }
+
+        if (!File.Exists(node.FullPath))
+        {
+            throw new InvalidOperationException("File does not exist.");
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "explorer.exe",
+            Arguments = $"/select,\"{node.FullPath}\"",
+            UseShellExecute = true
+        });
+    }
+
+    public void OpenWithDefaultApp(ProjectTreeNode node)
+    {
+        if (node.IsExternal && !string.IsNullOrWhiteSpace(node.ExternalTargetPathOrUrl))
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = node.ExternalTargetPathOrUrl,
+                UseShellExecute = true
+            });
+            return;
+        }
+
+        var targetPath = node.FullPath;
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            throw new InvalidOperationException("Path is empty.");
+        }
+
+        if (!node.IsDirectory && !File.Exists(targetPath))
+        {
+            throw new InvalidOperationException("File does not exist.");
+        }
+
+        if (node.IsDirectory && !Directory.Exists(targetPath))
+        {
+            throw new InvalidOperationException("Folder does not exist.");
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = targetPath,
+            UseShellExecute = true
+        });
+    }
+
     private static ProjectTreeNode BuildDirectoryNode(ProjectMeta project, DirectoryInfo directory, string parentRelativePath, bool isRoot)
     {
         var relativePath = Path.GetRelativePath(project.ProjectDirectoryPath, directory.FullName);
@@ -187,6 +342,22 @@ public sealed class FileSystemProjectExplorerService : IFileSystemProjectExplore
         }
 
         return project.ProjectDirectoryPath;
+    }
+
+    private static string EnsureNodePathInsideProject(ProjectMeta project, ProjectTreeNode node)
+    {
+        if (string.IsNullOrWhiteSpace(node.FullPath))
+        {
+            throw new InvalidOperationException("Node path is empty.");
+        }
+
+        var fullNodePath = Path.GetFullPath(node.FullPath);
+        if (!IsInsideProject(project.ProjectDirectoryPath, fullNodePath))
+        {
+            throw new InvalidOperationException("Operation outside project folder is not allowed.");
+        }
+
+        return fullNodePath;
     }
 
     private static bool IsInsideProject(string projectRootPath, string candidatePath)

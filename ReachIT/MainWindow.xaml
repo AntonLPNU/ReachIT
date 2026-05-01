@@ -11,9 +11,12 @@
         MinWidth="900">
     <Window.InputBindings>
         <KeyBinding Key="R" Command="{Binding ToggleSidePanelCommand}" />
+        <KeyBinding Modifiers="Alt" Key="Left" Command="{Binding GoBackCommand}" />
+        <KeyBinding Modifiers="Alt" Key="Right" Command="{Binding GoForwardCommand}" />
     </Window.InputBindings>
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
@@ -38,7 +41,14 @@
             </MenuItem>
         </Menu>
 
-        <Border Grid.Row="1" Padding="12">
+        <ToolBarTray Grid.Row="1" IsLocked="True" Background="Transparent">
+            <ToolBar>
+                <Button Content="← Back" Command="{Binding GoBackCommand}" Width="80" />
+                <Button Content="Forward →" Command="{Binding GoForwardCommand}" Width="90" />
+            </ToolBar>
+        </ToolBarTray>
+
+        <Border Grid.Row="2" Padding="12">
             <ContentControl Content="{Binding CurrentWorkspaceViewModel}" />
         </Border>
     </Grid>

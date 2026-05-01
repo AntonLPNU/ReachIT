@@ -5,19 +5,63 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <WrapPanel Margin="0,0,0,8">
             <Button Content="Add Task" Command="{Binding AddTaskCommand}" Margin="0,0,8,0" />
-            <Button Content="Edit Task" Command="{Binding EditTaskCommand}" Margin="0,0,8,0" />
+            <Button Content="Save Edit" Command="{Binding EditTaskCommand}" Margin="0,0,8,0" />
+            <Button Content="Complete" Command="{Binding MarkCompletedCommand}" Margin="0,0,8,0" />
             <Button Content="Delete Task" Command="{Binding DeleteTaskCommand}" Margin="0,0,8,0" />
             <Button Content="Link Task To Node" Command="{Binding LinkTaskToNodeCommand}" />
         </WrapPanel>
 
-        <ListBox Grid.Row="1"
-                 ItemsSource="{Binding Tasks}"
-                 SelectedItem="{Binding SelectedTask}"
-                 DisplayMemberPath="Title" />
+        <Border Grid.Row="1" BorderBrush="#DDDDDD" BorderThickness="1" Padding="8" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Task Title" />
+                    <TextBox Text="{Binding EditTitle, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" />
+                    <TextBlock Text="Description" />
+                    <TextBox Text="{Binding EditDescription, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="60" TextWrapping="Wrap" Margin="0,2,0,0" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Deadline" />
+                    <DatePicker SelectedDate="{Binding EditDeadlineDate}" Margin="0,2,0,6" />
+                    <WrapPanel Margin="0,0,0,8">
+                        <Button Content="Today" Command="{Binding SetDeadlineTodayCommand}" Margin="0,0,6,0" />
+                        <Button Content="Tomorrow" Command="{Binding SetDeadlineTomorrowCommand}" Margin="0,0,6,0" />
+                        <Button Content="Clear" Command="{Binding ClearDeadlineCommand}" />
+                    </WrapPanel>
+                    <CheckBox Content="Completed" IsChecked="{Binding EditIsCompleted}" Margin="0,0,0,8" />
+                    <TextBlock Text="{Binding DeadlineValidationMessage}" Foreground="DarkRed" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding OverdueTasksCount, StringFormat=Overdue: {0}}" />
+                    <TextBlock Text="{Binding DueTodayCount, StringFormat=Due today: {0}}" />
+                    <TextBlock Text="{Binding WithoutDeadlineCount, StringFormat=No deadline: {0}}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <DataGrid Grid.Row="2"
+                  ItemsSource="{Binding Tasks}"
+                  SelectedItem="{Binding SelectedTask}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*" />
+                <DataGridCheckBoxColumn Header="Done" Binding="{Binding IsCompleted}" Width="70" />
+                <DataGridTextColumn Header="Deadline" Binding="{Binding DueDateUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="150" />
+                <DataGridTextColumn Header="Deadline Status" Binding="{Binding DeadlineStatus}" Width="120" />
+                <DataGridTextColumn Header="Progress" Binding="{Binding ProgressPercent, StringFormat={}{0}%}" Width="90" />
+            </DataGrid.Columns>
+        </DataGrid>
     </Grid>
 </UserControl>

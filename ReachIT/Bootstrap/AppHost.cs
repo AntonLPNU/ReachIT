@@ -40,9 +40,16 @@ public sealed class AppHost
             GetRequiredService<IRecentFilesService>(),
             GetRequiredService<IExternalResourceService>(),
             GetRequiredService<IProjectService>()));
-        RegisterSingleton(new MainDashboardViewModel());
+        RegisterSingleton(new MainDashboardViewModel(
+            GetRequiredService<IProjectService>(),
+            GetRequiredService<ITaskService>(),
+            GetRequiredService<IStatisticsService>(),
+            GetRequiredService<IExternalResourceService>(),
+            GetRequiredService<IFocusModeService>()));
         RegisterSingleton(new ProjectInfoViewModel());
-        RegisterSingleton(new FileViewModel());
+        RegisterSingleton(new FileViewModel(
+            GetRequiredService<IProjectService>(),
+            GetRequiredService<ITaskService>()));
         RegisterSingleton(new PlanningViewModel());
         RegisterSingleton(new VersionsViewModel());
         RegisterSingleton(new TaskManagerViewModel(GetRequiredService<ITaskService>()));
@@ -61,6 +68,7 @@ public sealed class AppHost
         RegisterSingleton(new MainViewModel(
             GetRequiredService<IProjectService>(),
             GetRequiredService<IExternalResourceService>(),
+            GetRequiredService<IFileSystemProjectExplorerService>(),
             GetRequiredService<INavigationService>(),
             GetRequiredService<IDialogService>(),
             GetRequiredService<ProjectTreeViewModel>(),

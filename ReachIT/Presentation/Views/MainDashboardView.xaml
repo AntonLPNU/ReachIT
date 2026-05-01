@@ -1,8 +1,188 @@
-<!-- Main workspace placeholder content. -->
+<!-- Main workspace dashboard content. -->
 <UserControl x:Class="ReachIT.Presentation.Views.MainDashboardView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid>
-        <TextBlock Text="Main View" FontSize="20" FontWeight="SemiBold" />
-    </Grid>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0">
+                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Project Header" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <TextBlock Text="{Binding ProjectName}" FontWeight="Bold" FontSize="18" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding ProjectDescription}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding ProjectPath, StringFormat=Path: {0}}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding CreatedAtText, StringFormat=Created: {0}}" Margin="0,4,0,0" />
+                        <TextBlock Text="{Binding LastModifiedText, StringFormat=Updated: {0}}" Margin="0,2,0,0" />
+                        <TextBlock Text="{Binding ProjectState, StringFormat=Status: {0}}" Margin="0,2,0,0" />
+                        <TextBlock Text="{Binding OverallProgress, StringFormat=Progress: {0:F1}%}" Margin="0,2,0,0" />
+                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding OverallProgress, Mode=OneWay}" Height="10" Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Quick Actions" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <Button Content="New Task" Command="{Binding NewTaskCommand}" Margin="0,0,0,6" />
+                        <Button Content="New Folder" Command="{Binding NewFolderCommand}" Margin="0,0,0,6" />
+                        <Button Content="Add File" Command="{Binding AddFileCommand}" Margin="0,0,0,6" />
+                        <Button Content="Add Allowed App" Command="{Binding AddAllowedAppCommand}" Margin="0,0,0,6" />
+                        <Button Content="Start / Stop Focus Mode" Command="{Binding ToggleFocusModeCommand}" Margin="0,0,0,6" />
+                        <Button Content="Open Side Panel" Command="{Binding OpenSidePanelCommand}" Margin="0,0,0,6" />
+                        <Button Content="Project Settings" Command="{Binding OpenProjectSettingsCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="Task Overview" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <TextBlock Text="{Binding TotalTasks, StringFormat=Total: {0}}" />
+                        <TextBlock Text="{Binding CompletedTasks, StringFormat=Completed: {0}}" Margin="0,2,0,0" />
+                        <TextBlock Text="{Binding ActiveTasks, StringFormat=Active: {0}}" Margin="0,2,0,0" />
+                        <TextBlock Text="{Binding OverdueTasks, StringFormat=Overdue: {0}}" Margin="0,2,0,0" />
+                        <TextBlock Text="Nearest deadlines" Margin="0,10,0,4" FontWeight="SemiBold" />
+                        <ItemsControl ItemsSource="{Binding NearestDeadlines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2">
+                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="Task List" FontSize="16" FontWeight="SemiBold" DockPanel.Dock="Left" />
+                            <Button Content="Refresh" Command="{Binding RefreshCommand}" DockPanel.Dock="Right" />
+                        </DockPanel>
+                        <TextBlock Text="{Binding EmptyTaskMessage}" Foreground="Gray" Margin="0,6,0,8" TextWrapping="Wrap" />
+                        <Button Content="Create First Task" Command="{Binding CreateFirstTaskCommand}" Width="140" Margin="0,0,0,8" />
+
+                        <DataGrid ItemsSource="{Binding TaskRows}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MinHeight="180">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*" />
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
+                                <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="90" />
+                                <DataGridTextColumn Header="Deadline" Binding="{Binding DeadlineText}" Width="140" />
+                                <DataGridTextColumn Header="Progress" Binding="{Binding Progress, StringFormat={}{0}%}" Width="90" />
+                                <DataGridTemplateColumn Header="Actions" Width="240">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <WrapPanel>
+                                                <Button Content="Open" Margin="0,0,4,0"
+                                                        Command="{Binding DataContext.OpenTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}" />
+                                                <Button Content="Edit" Margin="0,0,4,0"
+                                                        Command="{Binding DataContext.EditTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}" />
+                                                <Button Content="Complete" Margin="0,0,4,0"
+                                                        Command="{Binding DataContext.CompleteTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}" />
+                                                <Button Content="Delete"
+                                                        Command="{Binding DataContext.DeleteTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}" />
+                                            </WrapPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="Focus Mode" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <TextBlock Text="{Binding FocusStatus, StringFormat=Status: {0}}" />
+                            <TextBlock Text="{Binding SelectedFocusTask, StringFormat=Selected task: {0}}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                            <TextBlock Text="Detected interruptions" FontWeight="SemiBold" Margin="0,8,0,0" />
+                            <TextBlock Text="{Binding InterruptionsCount}" />
+                            <TextBlock Text="Allowed work programs" FontWeight="SemiBold" Margin="0,8,0,4" />
+                            <ItemsControl ItemsSource="{Binding AllowedApplications}" />
+                            <Button Content="Start / Stop Focus Mode" Command="{Binding ToggleFocusModeCommand}" Margin="0,10,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="Productivity Statistics" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <TextBlock Text="{Binding WorkedTodayText, StringFormat=Worked today: {0}}" />
+                            <TextBlock Text="{Binding WorkedWeekText, StringFormat=Worked this week: {0}}" Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding CompletedTasksToday, StringFormat=Completed today: {0}}" Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding ProductivityScore, StringFormat=Productivity score: {0}}" Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding InterruptionsCount, StringFormat=Interruptions: {0}}" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="Project Environment" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <TextBlock Text="{Binding TotalFiles, StringFormat=Project files: {0}}" />
+                            <TextBlock Text="Attached external files" FontWeight="SemiBold" Margin="0,8,0,4" />
+                            <ItemsControl ItemsSource="{Binding ExternalFiles}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="Project folders/files" FontWeight="SemiBold" Margin="0,8,0,4" />
+                            <ItemsControl ItemsSource="{Binding ProjectItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="Recent Activity" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <ItemsControl ItemsSource="{Binding RecentActivity}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="#EEE" BorderThickness="0,0,0,1" Padding="0,4,0,4">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Category}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding TimestampUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Foreground="Gray" FontSize="11" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <TextBlock Text="{Binding StatusText}" Foreground="Gray" />
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

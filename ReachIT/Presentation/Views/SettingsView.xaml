@@ -3,7 +3,12 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Grid>
-        <CheckBox Content="Show related tasks in tree"
-                  IsChecked="{Binding ShowRelatedTasksInTree}" />
+        <StackPanel>
+            <CheckBox Content="Show related tasks in tree"
+                      IsChecked="{Binding ShowRelatedTasksInTree}"
+                      Margin="0,0,0,8" />
+            <CheckBox Content="Hide side panel after external file open"
+                      IsChecked="{Binding HideSidePanelAfterExternalFileOpen}" />
+        </StackPanel>
     </Grid>
 </UserControl>

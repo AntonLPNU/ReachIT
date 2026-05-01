@@ -18,7 +18,8 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="61*" />
+            <RowDefinition Height="7*"/>
             <RowDefinition Height="220" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -29,11 +30,21 @@
             <Button Content="New File" Command="{Binding NewFileCommand}" Margin="0,0,6,6" />
             <Button Content="New Folder" Command="{Binding NewFolderCommand}" Margin="0,0,6,6" />
             <Button Content="Refresh" Command="{Binding RefreshTreeCommand}" Margin="0,0,6,6" />
+            <Button Content="Open" Command="{Binding OpenSelectedNodeCommand}" Margin="0,0,6,6" />
+            <Button Content="Reveal" Command="{Binding RevealSelectedNodeCommand}" Margin="0,0,6,6" />
+            <Button Content="Rename" Command="{Binding RenameSelectedNodeCommand}" Margin="0,0,6,6" />
+            <Button Content="Delete" Command="{Binding DeleteSelectedNodeCommand}" Margin="0,0,6,6" />
             <Button Content="Pin/Unpin Panel" Command="{Binding ToggleAppBarModeCommand}" Margin="0,0,6,6" />
             <Button Content="Open Main Window" Command="{Binding OpenMainWorkspaceCommand}" Margin="0,0,6,6" />
         </WrapPanel>
 
-        <TreeView Grid.Row="2" ItemsSource="{Binding ProjectTreeViewModel.Nodes}" SelectedItemChanged="TreeView_SelectedItemChanged">
+        <TreeView Grid.Row="2" ItemsSource="{Binding ProjectTreeViewModel.Nodes}" SelectedItemChanged="TreeView_SelectedItemChanged" MouseDoubleClick="TreeView_MouseDoubleClick" Grid.RowSpan="2">
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+                </Style>
+            </TreeView.ItemContainerStyle>
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                     <TextBlock Text="{Binding Name}" />
@@ -41,11 +52,11 @@
             </TreeView.ItemTemplate>
         </TreeView>
 
-        <Border Grid.Row="3" Margin="0,8,0,8" BorderThickness="1" BorderBrush="LightGray" Padding="6">
+        <Border Grid.Row="4" Margin="0,8,0,8" BorderThickness="1" BorderBrush="LightGray" Padding="6">
             <views:RecentExternalFilesPanel DataContext="{Binding RecentExternalFilesPanelViewModel}" />
         </Border>
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,220,0,0" Grid.RowSpan="2">
             <TextBlock Text="Focus:" FontWeight="SemiBold" Margin="0,0,4,0" />
             <TextBlock Text="{Binding FocusModeViewModel.IsActive, StringFormat='Active={0}'}" />
             <TextBlock Text=" | AppBar:" Margin="8,0,4,0" FontWeight="SemiBold" />

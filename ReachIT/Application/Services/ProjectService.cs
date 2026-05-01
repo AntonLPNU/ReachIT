@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using ReachIT.Application.Contracts;
+using ReachIT.Domain.Enums;
 using ReachIT.Domain.Models;
 
 namespace ReachIT.Application.Services;
@@ -48,6 +49,7 @@ public sealed class ProjectService : IProjectService
 
         var projectDirectory = Path.Combine(request.SaveLocation, safeProjectName);
         Directory.CreateDirectory(projectDirectory);
+        CreateTemplateStructure(projectDirectory, request.TemplateType);
 
         var meta = new ProjectMeta
         {
@@ -78,6 +80,23 @@ public sealed class ProjectService : IProjectService
         }
 
         return meta;
+    }
+
+    private static void CreateTemplateStructure(string projectDirectory, ProjectTemplateType templateType)
+    {
+        IReadOnlyList<string> folders = templateType switch
+        {
+            ProjectTemplateType.StudyProject => ["Notes", "Materials", "Reports", "Tasks", "Sources"],
+            ProjectTemplateType.FreelanceProject => ["Client", "Files", "Deliverables", "Tasks", "Versions", "References"],
+            ProjectTemplateType.CreativeProject => ["Assets", "References", "Exports", "Versions", "Notes"],
+            ProjectTemplateType.ResearchProject => ["Sources", "Notes", "Links", "Drafts", "Results"],
+            _ => []
+        };
+
+        foreach (var folder in folders)
+        {
+            Directory.CreateDirectory(Path.Combine(projectDirectory, folder));
+        }
     }
 
     public async Task<ProjectMeta?> OpenProjectFromDialogAsync(CancellationToken cancellationToken = default)
