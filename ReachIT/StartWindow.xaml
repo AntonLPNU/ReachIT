@@ -1,13 +1,72 @@
 <Window x:Class="ReachIT.StartWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:views="clr-namespace:ReachIT.Presentation.Views"
         Title="ReachIT Start"
+        Icon="Resources/AppIcon.ico"
         Height="520"
         Width="780"
         WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
         ResizeMode="CanResize">
-    <Grid>
-        <views:StartView />
-    </Grid>
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="0"
+                            ResizeBorderThickness="6"
+                            GlassFrameThickness="0"
+                            CornerRadius="0"
+                            UseAeroCaptionButtons="False" />
+    </shell:WindowChrome.WindowChrome>
+
+    <Border Background="{StaticResource ReachItWindowBackgroundBrush}"
+            BorderBrush="{StaticResource ReachItBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="0">
+        <DockPanel>
+            <Border DockPanel.Dock="Top"
+                    Height="40"
+                    Background="#151E31"
+                    BorderBrush="{StaticResource ReachItBorderBrush}"
+                    BorderThickness="0,0,0,1"
+                    CornerRadius="0"
+                    MouseLeftButtonDown="OnTitleBarMouseLeftButtonDown">
+                <Grid>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="12,0,0,0">
+                        <Image Source="Resources/AppIcon.png"
+                               Width="20"
+                               Height="20"
+                               Margin="0,0,8,0" />
+                        <TextBlock Text="ReachIT Start"
+                                   VerticalAlignment="Center"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource ReachItInkBrush}" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button Content="-"
+                                Style="{StaticResource ReachItTitleBarButtonStyle}"
+                                ToolTip="Minimize"
+                                Click="OnMinimizeClick" />
+                        <Button Content="[]"
+                                Style="{StaticResource ReachItTitleBarButtonStyle}"
+                                ToolTip="Maximize / Restore"
+                                Click="OnMaximizeRestoreClick" />
+                        <Button Content="x"
+                                Style="{StaticResource ReachItTitleBarButtonStyle}"
+                                Foreground="{StaticResource NeonPinkBrush}"
+                                ToolTip="Close"
+                                Click="OnCloseClick" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Grid Background="{StaticResource ReachItWindowBackgroundBrush}">
+                <views:StartView />
+            </Grid>
+        </DockPanel>
+    </Border>
 </Window>

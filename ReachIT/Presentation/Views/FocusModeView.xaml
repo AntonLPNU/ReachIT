@@ -4,24 +4,65 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:enums="clr-namespace:ReachIT.Domain.Enums">
     <Grid>
-        <StackPanel>
-            <TextBlock Text="Focus Mode" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8" />
-            <ComboBox SelectedItem="{Binding SelectedMode}" Margin="0,0,0,8">
-                <ComboBox.ItemsSource>
-                    <x:Array Type="{x:Type enums:FocusModeType}">
-                        <enums:FocusModeType>Light</enums:FocusModeType>
-                        <enums:FocusModeType>Strict</enums:FocusModeType>
-                        <enums:FocusModeType>Aggressive</enums:FocusModeType>
-                    </x:Array>
-                </ComboBox.ItemsSource>
-            </ComboBox>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                <Button Content="Start" Command="{Binding StartCommand}" Margin="0,0,8,0" />
-                <Button Content="Stop" Command="{Binding StopCommand}" />
-            </StackPanel>
-            <TextBlock Text="{Binding IsActive, StringFormat=Active: {0}}" />
-            <TextBlock Margin="0,8,0,0" Text="Allowed Applications:" FontWeight="SemiBold" />
-            <ItemsControl ItemsSource="{Binding AllowedApplications}" />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="Focus Mode" Style="{StaticResource ReachItPageTitleTextStyle}" FontSize="24" Margin="0,0,0,12" />
+
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ComboBox Grid.Column="0" SelectedItem="{Binding SelectedMode}" Margin="0,0,12,0" Width="120">
+                    <ComboBox.ItemsSource>
+                        <x:Array Type="{x:Type enums:FocusModeType}">
+                            <enums:FocusModeType>Light</enums:FocusModeType>
+                            <enums:FocusModeType>Strict</enums:FocusModeType>
+                            <enums:FocusModeType>Aggressive</enums:FocusModeType>
+                        </x:Array>
+                    </ComboBox.ItemsSource>
+                </ComboBox>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="▶ Start" Command="{Binding StartCommand}" Width="90" />
+                    <Button Content="Ⅱ Pause" Command="{Binding PauseCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" Width="90" />
+                    <Button Content="■ Stop" Command="{Binding StopCommand}" Style="{StaticResource ReachItDangerButtonStyle}" Width="90" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="{Binding SessionDurationText}" Foreground="{StaticResource ReachItTitleBrush}" FontSize="26" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0"/>
+            </Grid>
         </StackPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource ReachItCardStyle}" Margin="0,0,10,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Allowed Applications" Style="{StaticResource ReachItSectionTitleTextStyle}" />
+                    <ListBox ItemsSource="{Binding AllowedApplications}" />
+                </DockPanel>
+            </Border>
+
+            <Border Grid.Column="1" Style="{StaticResource ReachItCardStyle}" Margin="0,0,10,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Distracting Applications" Style="{StaticResource ReachItSectionTitleTextStyle}" />
+                    <ListBox ItemsSource="{Binding BlockedApplications}" />
+                </DockPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource ReachItCardStyle}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Distraction Log" Style="{StaticResource ReachItSectionTitleTextStyle}" />
+                    <ListBox ItemsSource="{Binding DistractionLog}" Foreground="{StaticResource NeonPinkBrush}" />
+                </DockPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

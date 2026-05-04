@@ -15,6 +15,7 @@ public sealed class MainViewModel : ViewModelBase
     private readonly IProjectService _projectService;
     private readonly IExternalResourceService _externalResourceService;
     private readonly IFileSystemProjectExplorerService _fileSystemProjectExplorerService;
+    private readonly IWorkUnitService _workUnitService;
     private readonly INavigationService _navigationService;
     private readonly IDialogService _dialogService;
     private readonly RelayCommand _goBackCommand;
@@ -27,11 +28,13 @@ public sealed class MainViewModel : ViewModelBase
     public event EventHandler? RequestHideSidePanel;
     public event EventHandler? RequestOpenMainWorkspace;
     public event EventHandler? RequestToggleAppBarMode;
+    public event EventHandler? RequestExitApplication;
 
     public MainViewModel(
         IProjectService projectService,
         IExternalResourceService externalResourceService,
         IFileSystemProjectExplorerService fileSystemProjectExplorerService,
+        IWorkUnitService workUnitService,
         INavigationService navigationService,
         IDialogService dialogService,
         ProjectTreeViewModel projectTreeViewModel,
@@ -49,6 +52,7 @@ public sealed class MainViewModel : ViewModelBase
         _projectService = projectService;
         _externalResourceService = externalResourceService;
         _fileSystemProjectExplorerService = fileSystemProjectExplorerService;
+        _workUnitService = workUnitService;
         _navigationService = navigationService;
         _dialogService = dialogService;
 
@@ -71,6 +75,7 @@ public sealed class MainViewModel : ViewModelBase
         ToggleSidePanelCommand = new RelayCommand(_ => RequestToggleSidePanel?.Invoke(this, EventArgs.Empty));
         OpenMainWorkspaceCommand = new RelayCommand(_ => RequestOpenMainWorkspace?.Invoke(this, EventArgs.Empty));
         ToggleAppBarModeCommand = new RelayCommand(_ => RequestToggleAppBarMode?.Invoke(this, EventArgs.Empty));
+        ExitApplicationCommand = new RelayCommand(_ => RequestExitApplication?.Invoke(this, EventArgs.Empty));
 
         NewFileCommand = new AsyncCommand(_ => CreateNewFileAsync());
         NewFolderCommand = new AsyncCommand(_ => CreateNewFolderAsync());
@@ -88,7 +93,11 @@ public sealed class MainViewModel : ViewModelBase
         CopyIntoProjectCommand = new AsyncCommand(_ => CopyIntoProjectAsync());
         SaveAsLinkCommand = new AsyncCommand(_ => SaveAsLinkAsync());
 
-        OpenTaskManagerCommand = new RelayCommand(_ => Navigate(TaskManagerViewModel));
+        OpenTaskManagerCommand = new RelayCommand(_ =>
+        {
+            TaskManagerViewModel.ShowAllTasks();
+            Navigate(TaskManagerViewModel);
+        });
         OpenStatisticsCommand = new RelayCommand(_ => Navigate(StatisticsViewModel));
         OpenPlanningCommand = new RelayCommand(_ => Navigate(PlanningViewModel));
         OpenVersionsCommand = new RelayCommand(_ => Navigate(VersionsViewModel));
@@ -116,7 +125,17 @@ public sealed class MainViewModel : ViewModelBase
 
         MainDashboardViewModel.RequestOpenSidePanel += (_, _) => RequestToggleSidePanel?.Invoke(this, EventArgs.Empty);
         MainDashboardViewModel.RequestOpenProjectSettings += (_, _) => Navigate(SettingsViewModel);
-        MainDashboardViewModel.RequestOpenTaskManager += (_, _) => Navigate(TaskManagerViewModel);
+        MainDashboardViewModel.RequestOpenTaskManager += (_, _) =>
+        {
+            TaskManagerViewModel.ShowAllTasks();
+            Navigate(TaskManagerViewModel);
+        };
+        MainDashboardViewModel.RequestOpenActiveTasks += (_, _) =>
+        {
+            TaskManagerViewModel.ShowActiveTasks();
+            Navigate(TaskManagerViewModel);
+        };
+        MainDashboardViewModel.RequestOpenStatistics += (_, _) => Navigate(StatisticsViewModel);
         MainDashboardViewModel.RequestRefreshTree += async (_, _) => await RefreshTreeAsync().ConfigureAwait(true);
 
         _navigationService.Navigated += OnNavigated;
@@ -159,6 +178,7 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand ToggleSidePanelCommand { get; }
     public ICommand OpenMainWorkspaceCommand { get; }
     public ICommand ToggleAppBarModeCommand { get; }
+    public ICommand ExitApplicationCommand { get; }
     public ICommand NewFileCommand { get; }
     public ICommand NewFolderCommand { get; }
     public ICommand RefreshTreeCommand { get; }
@@ -187,6 +207,7 @@ public sealed class MainViewModel : ViewModelBase
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
+        await SettingsViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
         ProjectTreeViewModel.SetNodes(await _projectService.GetCurrentTreeAsync(cancellationToken).ConfigureAwait(true), preserveState: false);
         await MainDashboardViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
         await TaskManagerViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
@@ -410,6 +431,11 @@ public sealed class MainViewModel : ViewModelBase
         try
         {
             _fileSystemProjectExplorerService.OpenWithDefaultApp(selectedNode);
+            if (_projectService.CurrentProject is not null)
+            {
+                await _workUnitService.RecordFileActivityAsync(_projectService.CurrentProject, selectedNode.FullPath).ConfigureAwait(true);
+                await MainDashboardViewModel.LoadAsync().ConfigureAwait(true);
+            }
 
             if (SettingsViewModel.HideSidePanelAfterExternalFileOpen && ShouldAutoHideSidePanelForOpenedNode(selectedNode))
             {

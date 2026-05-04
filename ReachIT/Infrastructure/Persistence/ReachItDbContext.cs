@@ -24,6 +24,10 @@ public sealed class ReachItDbContext : DbContext
     public DbSet<FocusSession> FocusSessions => Set<FocusSession>();
     public DbSet<ProductivityStat> ProductivityStats => Set<ProductivityStat>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<WorkItem> WorkItems => Set<WorkItem>();
+    public DbSet<WorkUnit> WorkUnits => Set<WorkUnit>();
+    public DbSet<Milestone> Milestones => Set<Milestone>();
+    public DbSet<TaskSuggestion> TaskSuggestions => Set<TaskSuggestion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +46,10 @@ public sealed class ReachItDbContext : DbContext
         modelBuilder.Entity<FocusSession>().HasKey(x => x.Id);
         modelBuilder.Entity<ProductivityStat>().HasKey(x => x.Id);
         modelBuilder.Entity<User>().HasKey(x => x.Id);
+        modelBuilder.Entity<WorkItem>().HasKey(x => x.Id);
+        modelBuilder.Entity<WorkUnit>().HasKey(x => x.Id);
+        modelBuilder.Entity<Milestone>().HasKey(x => x.Id);
+        modelBuilder.Entity<TaskSuggestion>().HasKey(x => x.Id);
 
         modelBuilder.Entity<ProjectMeta>().Property(x => x.ProjectName).HasMaxLength(200).IsRequired();
         modelBuilder.Entity<ProjectMeta>().Property(x => x.Description).HasMaxLength(2000);
@@ -79,5 +87,41 @@ public sealed class ReachItDbContext : DbContext
             .WithOne()
             .HasForeignKey(x => x.TaskItemId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<WorkItem>().Property(x => x.Title).HasMaxLength(250).IsRequired();
+        modelBuilder.Entity<WorkItem>().Property(x => x.Description).HasMaxLength(4000);
+        modelBuilder.Entity<WorkItem>().Property(x => x.Type).HasConversion<int>().IsRequired();
+        modelBuilder.Entity<WorkItem>().Property(x => x.Status).HasConversion<int>().IsRequired();
+        modelBuilder.Entity<WorkItem>().Property(x => x.LinkedPath).HasMaxLength(2500);
+        modelBuilder.Entity<WorkItem>().Property(x => x.LinkedApp).HasMaxLength(260);
+        modelBuilder.Entity<WorkItem>().Property(x => x.Tags).HasMaxLength(1000);
+        modelBuilder.Entity<WorkItem>().Property(x => x.Notes).HasMaxLength(8000);
+        modelBuilder.Entity<WorkItem>()
+            .HasMany(x => x.Children)
+            .WithOne(x => x.Parent)
+            .HasForeignKey(x => x.ParentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<WorkItem>()
+            .HasIndex(x => new { x.ProjectId, x.LegacyTaskItemId });
+        modelBuilder.Entity<WorkItem>()
+            .HasIndex(x => new { x.ProjectId, x.LinkedPath });
+
+        modelBuilder.Entity<WorkUnit>().Property(x => x.Type).HasConversion<int>().IsRequired();
+        modelBuilder.Entity<WorkUnit>().Property(x => x.Source).HasMaxLength(100);
+        modelBuilder.Entity<WorkUnit>().Property(x => x.MetadataJson).HasMaxLength(8000);
+        modelBuilder.Entity<WorkUnit>().HasIndex(x => new { x.ProjectId, x.WorkItemId });
+        modelBuilder.Entity<WorkUnit>().HasIndex(x => new { x.ProjectId, x.CreatedAt });
+
+        modelBuilder.Entity<Milestone>().Property(x => x.Title).HasMaxLength(250).IsRequired();
+        modelBuilder.Entity<Milestone>().Property(x => x.Description).HasMaxLength(4000);
+        modelBuilder.Entity<Milestone>().Property(x => x.Status).HasConversion<int>().IsRequired();
+
+        modelBuilder.Entity<TaskSuggestion>().Property(x => x.SuggestedTitle).HasMaxLength(250).IsRequired();
+        modelBuilder.Entity<TaskSuggestion>().Property(x => x.SuggestedDescription).HasMaxLength(4000);
+        modelBuilder.Entity<TaskSuggestion>().Property(x => x.SuggestedType).HasConversion<int>().IsRequired();
+        modelBuilder.Entity<TaskSuggestion>().Property(x => x.SuggestedLinkedPath).HasMaxLength(2500);
+        modelBuilder.Entity<TaskSuggestion>().Property(x => x.Reason).HasMaxLength(1000);
+        modelBuilder.Entity<TaskSuggestion>().Property(x => x.Status).HasConversion<int>().IsRequired();
+        modelBuilder.Entity<TaskSuggestion>().HasIndex(x => new { x.ProjectId, x.Status });
     }
 }

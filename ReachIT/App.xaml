@@ -4,6 +4,13 @@
              xmlns:viewModels="clr-namespace:ReachIT.Presentation.ViewModels"
              xmlns:views="clr-namespace:ReachIT.Presentation.Views">
     <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Localization/StringResources.en.xaml" />
+                <ResourceDictionary Source="Resources/Styles/BaseStyles.xaml" />
+                <ResourceDictionary Source="Resources/Templates/BaseTemplates.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
         <DataTemplate DataType="{x:Type viewModels:MainDashboardViewModel}">
             <views:MainDashboardView />
         </DataTemplate>
@@ -31,5 +38,6 @@
         <DataTemplate DataType="{x:Type viewModels:FocusModeViewModel}">
             <views:FocusModeView />
         </DataTemplate>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

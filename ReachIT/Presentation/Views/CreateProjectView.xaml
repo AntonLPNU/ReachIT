@@ -2,44 +2,62 @@
 <UserControl x:Class="ReachIT.Presentation.Views.CreateProjectView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid Margin="16">
+    <Grid Margin="18" Background="{StaticResource ReachItWindowBackgroundBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="140" />
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
 
-        <TextBlock Text="Project Name" Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" />
-        <TextBox Text="{Binding ProjectName, UpdateSourceTrigger=PropertyChanged}" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" />
+        <Border Grid.Row="0" Style="{StaticResource ReachItHeroCardStyle}" Padding="18" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Text="Create Project" Foreground="White" FontSize="28" FontWeight="Bold" />
+                <TextBlock Text="Name it, choose a home folder, pick a template, and collect the starting files."
+                           Foreground="#EAF7FF"
+                           Margin="0,6,0,0" />
+            </StackPanel>
+        </Border>
 
-        <TextBlock Text="Description" Grid.Row="1" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" />
-        <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" />
+        <Border Grid.Row="1" Style="{StaticResource ReachItCardStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-        <TextBlock Text="Save Location" Grid.Row="2" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" />
-        <TextBox Text="{Binding SaveLocation, UpdateSourceTrigger=PropertyChanged}" Grid.Row="2" Grid.Column="1" Margin="0,0,8,8" />
-        <Button Content="Browse" Command="{Binding BrowseLocationCommand}" Grid.Row="2" Grid.Column="2" Margin="0,0,0,8" />
+                <TextBlock Text="Project Name" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="0" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
+                <TextBox Text="{Binding ProjectName, UpdateSourceTrigger=PropertyChanged}" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12" />
 
-        <TextBlock Text="Template" Grid.Row="3" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" />
-        <ComboBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}" Margin="0,0,0,8" />
+                <TextBlock Text="Description" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="1" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
+                <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12" />
 
-        <GroupBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Header="Initial External Files" Margin="0,0,0,8">
-            <DockPanel>
-                <Button Content="Add initial external files" Command="{Binding AddInitialExternalFileCommand}" DockPanel.Dock="Top" Margin="0,0,0,8" />
-                <ListBox ItemsSource="{Binding InitialExternalFiles}" />
-            </DockPanel>
-        </GroupBox>
+                <TextBlock Text="Save Location" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="2" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
+                <TextBox Text="{Binding SaveLocation, UpdateSourceTrigger=PropertyChanged}" Grid.Row="2" Grid.Column="1" Margin="0,0,8,12" />
+                <Button Content="Browse" Command="{Binding BrowseLocationCommand}" Grid.Row="2" Grid.Column="2" Style="{StaticResource ReachItSecondaryButtonStyle}" Margin="0,0,0,12" />
 
-        <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Create Project" Command="{Binding CreateCommand}" Margin="0,0,8,0" />
-            <Button Content="Cancel" Command="{Binding CancelCommand}" />
+                <TextBlock Text="Template" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="3" Grid.Column="0" Margin="0,0,12,14" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}" Margin="0,0,0,14" />
+
+                <GroupBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Header="Initial External Files">
+                    <DockPanel Margin="8">
+                        <Button Content="+ Add initial external files" Command="{Binding AddInitialExternalFileCommand}" DockPanel.Dock="Top" Margin="0,0,0,10" />
+                        <ListBox ItemsSource="{Binding InitialExternalFiles}" MinHeight="120" />
+                    </DockPanel>
+                </GroupBox>
+            </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Create Project" Command="{Binding CreateCommand}" Width="170" />
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" Width="110" />
         </StackPanel>
     </Grid>
 </UserControl>

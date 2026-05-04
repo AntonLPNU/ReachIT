@@ -9,7 +9,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock Text="Recent External Files" FontWeight="SemiBold" Margin="0,0,0,6" />
+        <TextBlock Text="Recent External Files" Style="{StaticResource ReachItSectionTitleTextStyle}" Margin="0,0,0,8" />
 
         <ListBox Grid.Row="1"
                  ItemsSource="{Binding Items}"
@@ -17,10 +17,10 @@
                  DisplayMemberPath="DisplayName" />
 
         <WrapPanel Grid.Row="2" Margin="0,6,0,0">
-            <Button Content="Attach to Project" Command="{Binding AttachToProjectCommand}" Margin="0,0,6,0" />
-            <Button Content="Copy into Project" Command="{Binding CopyIntoProjectCommand}" Margin="0,0,6,0" />
-            <Button Content="Save as Link" Command="{Binding SaveAsLinkCommand}" Margin="0,0,6,0" />
-            <Button Content="Remove from Recent" Command="{Binding RemoveFromRecentCommand}" />
+            <Button Content="+ Attach" Command="{Binding AttachToProjectCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" />
+            <Button Content="⧉ Copy" Command="{Binding CopyIntoProjectCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" />
+            <Button Content="🔗 Link" Command="{Binding SaveAsLinkCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" />
+            <Button Content="× Remove" Command="{Binding RemoveFromRecentCommand}" Style="{StaticResource ReachItDangerButtonStyle}" />
         </WrapPanel>
     </Grid>
 </UserControl>

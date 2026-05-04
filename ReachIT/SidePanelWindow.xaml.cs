@@ -50,7 +50,6 @@ public partial class SidePanelWindow : Window
 
         if (enabled)
         {
-            WindowStyle = WindowStyle.ToolWindow;
             ResizeMode = ResizeMode.NoResize;
             ApplyPinnedLayout();
             return;
@@ -95,6 +94,28 @@ public partial class SidePanelWindow : Window
         {
             mainViewModel.OpenMainWorkspaceCommand.Execute(null);
         }
+    }
+
+    private void TitleArea_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (IsAppBarModeEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            DragMove();
+        }
+        catch (InvalidOperationException)
+        {
+            // WPF can throw if the mouse capture is interrupted while dragging.
+        }
+    }
+
+    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        Hide();
     }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)

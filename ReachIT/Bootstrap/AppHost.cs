@@ -14,12 +14,18 @@ public sealed class AppHost
 
     public void Initialize()
     {
+        RegisterSingleton<ReachIT.Infrastructure.Logging.ILocalLogger>(new ReachIT.Infrastructure.Logging.LocalLogger());
         RegisterSingleton<IDatabaseService>(new DatabaseService());
+        RegisterSingleton<IAppSettingsService>(new AppSettingsService(GetRequiredService<IDatabaseService>()));
         RegisterSingleton<IProcessMonitorService>(new ProcessMonitorService());
         RegisterSingleton<IDialogService>(new DialogService());
         RegisterSingleton<IOverlayService>(new OverlayService());
         RegisterSingleton<INavigationService>(new NavigationService());
+        RegisterSingleton<ITrayIconService>(new TrayIconService());
+        RegisterSingleton<IGlobalHotkeyService>(new GlobalHotkeyService(GetRequiredService<ReachIT.Infrastructure.Logging.ILocalLogger>()));
         RegisterSingleton<IRecentFilesService>(new RecentFilesService(GetRequiredService<IDatabaseService>()));
+        RegisterSingleton<IWorkItemRepository>(new WorkItemRepository(GetRequiredService<IDatabaseService>()));
+        RegisterSingleton<IWorkUnitRepository>(new WorkUnitRepository(GetRequiredService<IDatabaseService>()));
         RegisterSingleton<IExternalResourceService>(new ExternalResourceService(
             GetRequiredService<IDatabaseService>(),
             GetRequiredService<IRecentFilesService>()));
@@ -31,9 +37,26 @@ public sealed class AppHost
             GetRequiredService<IRecentFilesService>(),
             GetRequiredService<IDatabaseService>(),
             GetRequiredService<IFileSystemProjectExplorerService>()));
-        RegisterSingleton<ITaskService>(new TaskService());
-        RegisterSingleton<IStatisticsService>(new StatisticsService());
-        RegisterSingleton<IFocusModeService>(new FocusModeService(GetRequiredService<IProcessMonitorService>()));
+        RegisterSingleton<ITaskService>(new TaskService(GetRequiredService<IDatabaseService>()));
+        RegisterSingleton<IWorkItemService>(new WorkItemService(
+            GetRequiredService<IWorkItemRepository>(),
+            GetRequiredService<ITaskService>()));
+        RegisterSingleton<IWorkUnitService>(new WorkUnitService(
+            GetRequiredService<IWorkUnitRepository>(),
+            GetRequiredService<IWorkItemRepository>()));
+        RegisterSingleton<IProgressCalculationService>(new ProgressCalculationService(GetRequiredService<IWorkItemRepository>()));
+        RegisterSingleton<ITaskSuggestionService>(new TaskSuggestionService(
+            GetRequiredService<IDatabaseService>(),
+            GetRequiredService<IWorkItemService>()));
+        RegisterSingleton<ITaskLinkingService>(new TaskLinkingService(GetRequiredService<IWorkItemRepository>()));
+        RegisterSingleton<IProjectProgressService>(new ProjectProgressService(
+            GetRequiredService<IDatabaseService>(),
+            GetRequiredService<IWorkItemService>(),
+            GetRequiredService<IProgressCalculationService>(),
+            GetRequiredService<ITaskSuggestionService>()));
+        RegisterSingleton<IStatisticsService>(new StatisticsService(GetRequiredService<IDatabaseService>()));
+        RegisterSingleton<IFocusModeService>(new FocusModeService(GetRequiredService<IProcessMonitorService>(), GetRequiredService<IDatabaseService>()));
+        RegisterSingleton<IGitService>(new GitService());
 
         RegisterSingleton(new ProjectTreeViewModel());
         RegisterSingleton(new RecentExternalFilesPanelViewModel(
@@ -45,18 +68,22 @@ public sealed class AppHost
             GetRequiredService<ITaskService>(),
             GetRequiredService<IStatisticsService>(),
             GetRequiredService<IExternalResourceService>(),
-            GetRequiredService<IFocusModeService>()));
+            GetRequiredService<IFocusModeService>(),
+            GetRequiredService<IProjectProgressService>()));
         RegisterSingleton(new ProjectInfoViewModel());
         RegisterSingleton(new FileViewModel(
             GetRequiredService<IProjectService>(),
             GetRequiredService<ITaskService>()));
-        RegisterSingleton(new PlanningViewModel());
-        RegisterSingleton(new VersionsViewModel());
-        RegisterSingleton(new TaskManagerViewModel(GetRequiredService<ITaskService>()));
+        RegisterSingleton(new PlanningViewModel(GetRequiredService<ITaskService>()));
+        RegisterSingleton(new VersionsViewModel(GetRequiredService<IDatabaseService>()));
+        RegisterSingleton(new TaskManagerViewModel(
+            GetRequiredService<ITaskService>(),
+            GetRequiredService<IProjectService>(),
+            GetRequiredService<IGitService>()));
         RegisterSingleton(new TaskDetailViewModel());
         RegisterSingleton(new StatisticsViewModel(GetRequiredService<IStatisticsService>()));
-        RegisterSingleton(new SettingsViewModel());
-        RegisterSingleton(new FocusModeViewModel(GetRequiredService<IFocusModeService>()));
+        RegisterSingleton(new SettingsViewModel(GetRequiredService<IDatabaseService>()));
+        RegisterSingleton(new FocusModeViewModel(GetRequiredService<IFocusModeService>(), GetRequiredService<IOverlayService>()));
         RegisterSingleton(new OverlayViewModel());
         RegisterSingleton(new CreateProjectViewModel(
             GetRequiredService<IProjectService>(),
@@ -64,11 +91,17 @@ public sealed class AppHost
         RegisterSingleton(new StartViewModel(
             GetRequiredService<IProjectService>(),
             GetRequiredService<IRecentFilesService>()));
+        RegisterSingleton(new FloatingLogoViewModel());
+        RegisterSingleton(new QuickMenuViewModel());
+        RegisterSingleton(new QuickAddTaskViewModel(
+            GetRequiredService<ITaskService>(),
+            GetRequiredService<IRecentFilesService>()));
 
         RegisterSingleton(new MainViewModel(
             GetRequiredService<IProjectService>(),
             GetRequiredService<IExternalResourceService>(),
             GetRequiredService<IFileSystemProjectExplorerService>(),
+            GetRequiredService<IWorkUnitService>(),
             GetRequiredService<INavigationService>(),
             GetRequiredService<IDialogService>(),
             GetRequiredService<ProjectTreeViewModel>(),
@@ -82,6 +115,18 @@ public sealed class AppHost
             GetRequiredService<VersionsViewModel>(),
             GetRequiredService<SettingsViewModel>(),
             GetRequiredService<FocusModeViewModel>()));
+
+        RegisterSingleton<IWindowManagerService>(new WindowManagerService(
+            GetRequiredService<IAppSettingsService>(),
+            GetRequiredService<IRecentFilesService>(),
+            GetRequiredService<IProjectService>(),
+            GetRequiredService<ITrayIconService>(),
+            GetRequiredService<IGlobalHotkeyService>(),
+            GetRequiredService<ReachIT.Infrastructure.Logging.ILocalLogger>(),
+            GetRequiredService<MainViewModel>(),
+            GetRequiredService<FloatingLogoViewModel>(),
+            GetRequiredService<QuickMenuViewModel>(),
+            GetRequiredService<QuickAddTaskViewModel>()));
     }
 
     public T GetRequiredService<T>() where T : class

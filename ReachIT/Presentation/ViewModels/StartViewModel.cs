@@ -29,10 +29,7 @@ public sealed class StartViewModel : ViewModelBase
         {
             // TODO: Open preview/attach flow for selected recent external file.
         });
-        OpenSettingsCommand = new RelayCommand(_ =>
-        {
-            // TODO: Open app settings from start flow.
-        });
+        OpenSettingsCommand = new RelayCommand(_ => RequestOpenSettings?.Invoke(this, EventArgs.Empty));
         ExitCommand = new RelayCommand(_ => RequestClose?.Invoke(this, false));
     }
 
@@ -52,6 +49,7 @@ public sealed class StartViewModel : ViewModelBase
 
     public event EventHandler<bool>? RequestClose;
     public event EventHandler? RequestCreateProject;
+    public event EventHandler? RequestOpenSettings;
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {

@@ -18,8 +18,16 @@ public sealed class StatisticsViewModel : ViewModelBase
     public ProjectStats ProjectStats
     {
         get => _projectStats;
-        private set => SetProperty(ref _projectStats, value);
+        private set 
+        {
+            if (SetProperty(ref _projectStats, value))
+            {
+                OnPropertyChanged(nameof(CompletionRate));
+            }
+        }
     }
+
+    public double CompletionRate => ProjectStats.TotalTasks > 0 ? (double)ProjectStats.CompletedTasks / ProjectStats.TotalTasks * 100 : 0;
 
     public ObservableCollection<ProductivityStat> Productivity { get; } = new();
 

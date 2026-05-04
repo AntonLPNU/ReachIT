@@ -2,18 +2,29 @@
 <UserControl x:Class="ReachIT.Presentation.Views.VersionsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-        <GroupBox Header="Project Versions" Margin="0,0,8,0">
-            <ListBox ItemsSource="{Binding ProjectVersions}" />
-        </GroupBox>
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Local Snapshots (DB Backups)" Style="{StaticResource ReachItPageTitleTextStyle}" Margin="0,0,0,8" />
+            <TextBlock Text="Create manual point-in-time snapshots of your entire workspace database." Style="{StaticResource ReachItMutedTextStyle}" Margin="0,0,0,12" />
+            <WrapPanel>
+                <Button Content="◈ Create Snapshot" Command="{Binding CreateSnapshotCommand}" Width="180" />
+                <Button Content="↺ Restore Selected Snapshot" Command="{Binding RestoreSnapshotCommand}" Width="230" Style="{StaticResource ReachItDangerButtonStyle}" />
+            </WrapPanel>
+        </StackPanel>
 
-        <GroupBox Header="File Versions" Grid.Column="1" Margin="8,0,0,0">
-            <ListBox ItemsSource="{Binding FileVersions}" />
-        </GroupBox>
+        <Border Grid.Row="1" Style="{StaticResource ReachItCardStyle}">
+            <DataGrid ItemsSource="{Binding Snapshots}" SelectedItem="{Binding SelectedSnapshot}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" HeadersVisibility="Column">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Snapshot Name" Binding="{Binding GroupName}" Width="300" />
+                    <DataGridTextColumn Header="Created Time" Binding="{Binding CreatedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="150" />
+                    <DataGridTextColumn Header="Internal Path" Binding="{Binding Path}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
     </Grid>
 </UserControl>

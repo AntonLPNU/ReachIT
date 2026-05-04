@@ -10,7 +10,6 @@ public interface ITaskService
     Task AddTaskAsync(TaskItem task, CancellationToken cancellationToken = default);
     Task UpdateTaskAsync(TaskItem task, CancellationToken cancellationToken = default);
     Task DeleteTaskAsync(Guid taskId, CancellationToken cancellationToken = default);
-    Task LinkTaskToNodeAsync(Guid taskId, Guid projectTreeNodeId, CancellationToken cancellationToken = default);
     Task AttachTaskToFileAsync(Guid taskId, string filePath, CancellationToken cancellationToken = default);
     Task<TaskItem> CreateAndAttachTaskToFileAsync(string title, string filePath, CancellationToken cancellationToken = default);
 }

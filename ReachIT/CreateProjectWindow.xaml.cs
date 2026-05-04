@@ -1,5 +1,6 @@
 // Hosts create-project form flow.
 using System.Windows;
+using System.Windows.Input;
 using ReachIT.Presentation.ViewModels;
 
 namespace ReachIT;
@@ -34,6 +35,17 @@ public partial class CreateProjectWindow : Window
     }
 
     private void OnRequestCancel(object? sender, EventArgs e)
+    {
+        DialogResult = false;
+        Close();
+    }
+
+    private void OnTitleBarMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        DragMove();
+    }
+
+    private void OnCloseClick(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
         Close();

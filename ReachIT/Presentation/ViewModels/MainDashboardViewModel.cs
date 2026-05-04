@@ -4,6 +4,7 @@ using System.Windows.Input;
 using ReachIT.Application.Contracts;
 using ReachIT.Domain.Models;
 using ReachIT.Presentation.Commands;
+using ReachIT.Presentation.Services;
 
 namespace ReachIT.Presentation.ViewModels;
 
@@ -14,6 +15,7 @@ public sealed class MainDashboardViewModel : ViewModelBase
     private readonly IStatisticsService _statisticsService;
     private readonly IExternalResourceService _externalResourceService;
     private readonly IFocusModeService _focusModeService;
+    private readonly IProjectProgressService _projectProgressService;
 
     private ProjectDashboardData _dashboardData = new();
     private string _statusText = "No project opened";
@@ -37,6 +39,12 @@ public sealed class MainDashboardViewModel : ViewModelBase
     private int _productivityScore;
     private int _interruptionsCount;
     private int _totalFiles;
+    private double _workItemProgressPercent;
+    private string _activeMilestoneTitle = "-";
+    private int _workItemsInProgress;
+    private int _filesChangedToday;
+    private double _focusMinutesToday;
+    private string _currentWorkContext = string.Empty;
     private string _emptyTaskMessage = "No tasks yet. Create your first task to start planning.";
 
     public MainDashboardViewModel(
@@ -44,13 +52,15 @@ public sealed class MainDashboardViewModel : ViewModelBase
         ITaskService taskService,
         IStatisticsService statisticsService,
         IExternalResourceService externalResourceService,
-        IFocusModeService focusModeService)
+        IFocusModeService focusModeService,
+        IProjectProgressService projectProgressService)
     {
         _projectService = projectService;
         _taskService = taskService;
         _statisticsService = statisticsService;
         _externalResourceService = externalResourceService;
         _focusModeService = focusModeService;
+        _projectProgressService = projectProgressService;
 
         RefreshCommand = new AsyncCommand(_ => LoadAsync());
         CreateFirstTaskCommand = new AsyncCommand(_ => CreateTaskAsync());
@@ -62,7 +72,8 @@ public sealed class MainDashboardViewModel : ViewModelBase
         OpenSidePanelCommand = new RelayCommand(_ => RequestOpenSidePanel?.Invoke(this, EventArgs.Empty));
         OpenProjectSettingsCommand = new RelayCommand(_ => RequestOpenProjectSettings?.Invoke(this, EventArgs.Empty));
 
-        OpenTaskCommand = new RelayCommand(_ => RequestOpenTaskManager?.Invoke(this, EventArgs.Empty));
+        OpenTaskCommand = new RelayCommand(_ => RequestOpenStatistics?.Invoke(this, EventArgs.Empty));
+        OpenActiveTasksCommand = new RelayCommand(_ => RequestOpenActiveTasks?.Invoke(this, EventArgs.Empty));
         EditTaskCommand = new RelayCommand(_ => RequestOpenTaskManager?.Invoke(this, EventArgs.Empty));
         CompleteTaskCommand = new AsyncCommand(p => CompleteTaskAsync(p as DashboardTaskRow));
         DeleteTaskCommand = new AsyncCommand(p => DeleteTaskAsync(p as DashboardTaskRow));
@@ -71,6 +82,8 @@ public sealed class MainDashboardViewModel : ViewModelBase
     public event EventHandler? RequestOpenSidePanel;
     public event EventHandler? RequestOpenProjectSettings;
     public event EventHandler? RequestOpenTaskManager;
+    public event EventHandler? RequestOpenActiveTasks;
+    public event EventHandler? RequestOpenStatistics;
     public event EventHandler? RequestRefreshTree;
 
     public ProjectDashboardData DashboardData
@@ -213,6 +226,9 @@ public sealed class MainDashboardViewModel : ViewModelBase
 
     public ObservableCollection<DashboardTaskRow> TaskRows { get; } = new();
     public ObservableCollection<DashboardTaskRow> NearestDeadlines { get; } = new();
+    public ObservableCollection<TaskSuggestion> SuggestedTasks { get; } = new();
+    public ObservableCollection<WorkItem> StaleWorkItems { get; } = new();
+    public ObservableCollection<WorkItem> RecentlyCompletedWorkItems { get; } = new();
     public ObservableCollection<string> AllowedApplications { get; } = new();
     public ObservableCollection<ExternalResourceItem> ExternalFiles { get; } = new();
     public ObservableCollection<string> ProjectItems { get; } = new();
@@ -228,9 +244,46 @@ public sealed class MainDashboardViewModel : ViewModelBase
     public ICommand OpenSidePanelCommand { get; }
     public ICommand OpenProjectSettingsCommand { get; }
     public ICommand OpenTaskCommand { get; }
+    public ICommand OpenActiveTasksCommand { get; }
     public ICommand EditTaskCommand { get; }
     public ICommand CompleteTaskCommand { get; }
     public ICommand DeleteTaskCommand { get; }
+
+    public double WorkItemProgressPercent
+    {
+        get => _workItemProgressPercent;
+        private set => SetProperty(ref _workItemProgressPercent, value);
+    }
+
+    public string ActiveMilestoneTitle
+    {
+        get => _activeMilestoneTitle;
+        private set => SetProperty(ref _activeMilestoneTitle, value);
+    }
+
+    public int WorkItemsInProgress
+    {
+        get => _workItemsInProgress;
+        private set => SetProperty(ref _workItemsInProgress, value);
+    }
+
+    public int FilesChangedToday
+    {
+        get => _filesChangedToday;
+        private set => SetProperty(ref _filesChangedToday, value);
+    }
+
+    public double FocusMinutesToday
+    {
+        get => _focusMinutesToday;
+        private set => SetProperty(ref _focusMinutesToday, value);
+    }
+
+    public string CurrentWorkContext
+    {
+        get => _currentWorkContext;
+        private set => SetProperty(ref _currentWorkContext, value);
+    }
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -247,6 +300,7 @@ public sealed class MainDashboardViewModel : ViewModelBase
         var externalResources = await _externalResourceService.GetByProjectAsync(project.Id, cancellationToken).ConfigureAwait(true);
         var focusSession = await _focusModeService.GetCurrentSessionAsync(cancellationToken).ConfigureAwait(true);
         var tree = await _projectService.GetCurrentTreeAsync(cancellationToken).ConfigureAwait(true);
+        var progressSnapshot = await _projectProgressService.GetSnapshotAsync(project, cancellationToken).ConfigureAwait(true);
 
         var projectItems = FlattenProjectItems(tree).Take(12).ToList();
         var taskRows = tasks.Select(MapTask).ToList();
@@ -286,7 +340,9 @@ public sealed class MainDashboardViewModel : ViewModelBase
         };
 
         ProjectName = string.IsNullOrWhiteSpace(project.ProjectName) ? "Unnamed project" : project.ProjectName;
-        ProjectDescription = string.IsNullOrWhiteSpace(project.Description) ? "No description added yet." : project.Description;
+        ProjectDescription = string.IsNullOrWhiteSpace(project.Description)
+            ? LocalizationService.GetString("Dashboard.NoDescription", "No description added yet.")
+            : project.Description;
         ProjectPath = project.ProjectDirectoryPath;
         CreatedAtText = project.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
         LastModifiedText = project.UpdatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
@@ -295,7 +351,15 @@ public sealed class MainDashboardViewModel : ViewModelBase
         CompletedTasks = completedTasks;
         ActiveTasks = activeTasks;
         OverdueTasks = overdueTasks;
-        OverallProgress = TotalTasks == 0 ? 0 : Math.Round((double)CompletedTasks / TotalTasks * 100d, 1);
+        WorkItemProgressPercent = progressSnapshot.ProjectProgressPercent;
+        OverallProgress = WorkItemProgressPercent > 0
+            ? WorkItemProgressPercent
+            : TotalTasks == 0 ? 0 : Math.Round((double)CompletedTasks / TotalTasks * 100d, 1);
+        ActiveMilestoneTitle = progressSnapshot.ActiveMilestone?.Title ?? "-";
+        WorkItemsInProgress = progressSnapshot.WorkItemsInProgress;
+        FilesChangedToday = progressSnapshot.FilesChangedToday;
+        FocusMinutesToday = progressSnapshot.FocusMinutesToday;
+        CurrentWorkContext = progressSnapshot.CurrentWorkContext;
         ProjectState = TotalTasks == 0
             ? "Not started"
             : ActiveTasks == 0
@@ -322,6 +386,9 @@ public sealed class MainDashboardViewModel : ViewModelBase
 
         SyncCollection(TaskRows, taskRows);
         SyncCollection(NearestDeadlines, nearestDeadlines);
+        SyncCollection(SuggestedTasks, progressSnapshot.SuggestedTasks);
+        SyncCollection(StaleWorkItems, progressSnapshot.StaleTasks);
+        SyncCollection(RecentlyCompletedWorkItems, progressSnapshot.RecentlyCompletedTasks);
         SyncCollection(AllowedApplications, focusApps);
         SyncCollection(ExternalFiles, externalResources);
         SyncCollection(ProjectItems, projectItems);
@@ -332,8 +399,8 @@ public sealed class MainDashboardViewModel : ViewModelBase
     {
         await _taskService.AddTaskAsync(new TaskItem
         {
-            Title = "New Task",
-            Description = "Define task details",
+            Title = LocalizationService.GetString("Dashboard.NewTaskTitle", "New Task"),
+            Description = LocalizationService.GetString("Dashboard.NewTaskDescription", "Define task details"),
             DueDateUtc = DateTime.UtcNow.AddDays(1),
             IsCompleted = false
         }).ConfigureAwait(true);
@@ -424,11 +491,20 @@ public sealed class MainDashboardViewModel : ViewModelBase
         ProductivityScore = 0;
         InterruptionsCount = 0;
         TotalFiles = 0;
+        WorkItemProgressPercent = 0;
+        ActiveMilestoneTitle = "-";
+        WorkItemsInProgress = 0;
+        FilesChangedToday = 0;
+        FocusMinutesToday = 0;
+        CurrentWorkContext = string.Empty;
         StatusText = "Open a .rit project to initialize dashboard data.";
         EmptyTaskMessage = "No tasks yet. Create your first task to start planning.";
 
         TaskRows.Clear();
         NearestDeadlines.Clear();
+        SuggestedTasks.Clear();
+        StaleWorkItems.Clear();
+        RecentlyCompletedWorkItems.Clear();
         AllowedApplications.Clear();
         ExternalFiles.Clear();
         ProjectItems.Clear();

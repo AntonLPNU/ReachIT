@@ -1,5 +1,6 @@
-// Provides safe in-memory task operations for initial app scaffold.
+// Provides database-backed task operations, including history tracking.
 using System.IO;
+using Microsoft.EntityFrameworkCore;
 using ReachIT.Application.Contracts;
 using ReachIT.Domain.Models;
 
@@ -7,118 +8,138 @@ namespace ReachIT.Application.Services;
 
 public sealed class TaskService : ITaskService
 {
-    private readonly Dictionary<string, HashSet<Guid>> _taskIdsByFilePath = new(StringComparer.OrdinalIgnoreCase);
+    private readonly IDatabaseService _databaseService;
 
-    private readonly List<TaskItem> _tasks =
-    [
-        new TaskItem { Title = "Prepare workspace structure", Description = "Initial scaffold task.", IsCompleted = false },
-        new TaskItem { Title = "Connect .rit loader", Description = "TODO parser integration.", IsCompleted = false }
-    ];
-
-    public Task<IReadOnlyList<TaskItem>> GetTasksAsync(CancellationToken cancellationToken = default)
+    public TaskService(IDatabaseService databaseService)
     {
-        return Task.FromResult<IReadOnlyList<TaskItem>>(_tasks.ToList());
+        _databaseService = databaseService;
     }
 
-    public Task<IReadOnlyList<TaskItem>> GetTasksByFilePathAsync(string filePath, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TaskItem>> GetTasksAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = _databaseService.CreateDbContext();
+        return await db.Tasks
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TaskItem>> GetTasksByFilePathAsync(string filePath, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(filePath))
-        {
-            return Task.FromResult<IReadOnlyList<TaskItem>>([]);
-        }
+            return [];
 
+        // Simple approach MVP: find tasks linked by RelatedProjectTreeNodeId or an auxiliary mapping.
+        // For MVP, we will assume RelatedProjectTreeNodeId handles tree files.
+        // If we strictly need file paths mapped, we can add a FilePath property to TaskItem.
+        await using var db = _databaseService.CreateDbContext();
         var normalizedPath = NormalizePath(filePath);
-        if (!_taskIdsByFilePath.TryGetValue(normalizedPath, out var taskIds))
-        {
-            return Task.FromResult<IReadOnlyList<TaskItem>>([]);
-        }
-
-        var attached = _tasks.Where(x => taskIds.Contains(x.Id)).ToList();
-        return Task.FromResult<IReadOnlyList<TaskItem>>(attached);
+        return await db.Tasks
+            .AsNoTracking()
+            .Where(t => t.AttachedFilePath == normalizedPath)
+            .ToListAsync(cancellationToken);
     }
 
-    public Task AddTaskAsync(TaskItem task, CancellationToken cancellationToken = default)
+    public async Task AddTaskAsync(TaskItem task, CancellationToken cancellationToken = default)
     {
-        if (task is null)
-        {
-            throw new ArgumentNullException(nameof(task));
-        }
+        if (task is null) throw new ArgumentNullException(nameof(task));
 
-        _tasks.Add(task);
-        return Task.CompletedTask;
+        if (task.Id == Guid.Empty) task.Id = Guid.NewGuid();
+        
+        await using var db = _databaseService.CreateDbContext();
+        db.Tasks.Add(task);
+        
+        db.TaskHistoryEntries.Add(new TaskHistoryEntry
+        {
+            Id = Guid.NewGuid(),
+            TaskItemId = task.Id,
+            ChangeType = "Created",
+            ChangedAtUtc = DateTime.UtcNow,
+            Notes = $"Task created: {task.Title}"
+        });
+        
+        await db.SaveChangesAsync(cancellationToken);
     }
 
-    public Task UpdateTaskAsync(TaskItem task, CancellationToken cancellationToken = default)
+    public async Task UpdateTaskAsync(TaskItem task, CancellationToken cancellationToken = default)
     {
-        var existing = _tasks.FirstOrDefault(x => x.Id == task.Id);
-        if (existing is null)
-        {
-            return Task.CompletedTask;
-        }
+        await using var db = _databaseService.CreateDbContext();
+        var existing = await db.Tasks.FirstOrDefaultAsync(x => x.Id == task.Id, cancellationToken);
+        if (existing is null) return;
 
+        var wasCompleted = existing.IsCompleted;
+        
         existing.Title = task.Title;
         existing.Description = task.Description;
         existing.IsCompleted = task.IsCompleted;
+        existing.Status = task.Status;
+        existing.Priority = task.Priority;
         existing.DueDateUtc = task.DueDateUtc;
+        existing.ParentTaskId = task.ParentTaskId;
         existing.CategoryId = task.CategoryId;
-        return Task.CompletedTask;
-    }
-
-    public Task DeleteTaskAsync(Guid taskId, CancellationToken cancellationToken = default)
-    {
-        _tasks.RemoveAll(x => x.Id == taskId);
-
-        foreach (var pair in _taskIdsByFilePath)
+        existing.RelatedProjectTreeNodeId = task.RelatedProjectTreeNodeId;
+        existing.AttachedFilePath = task.AttachedFilePath;
+        
+        db.TaskHistoryEntries.Add(new TaskHistoryEntry
         {
-            pair.Value.Remove(taskId);
-        }
+            Id = Guid.NewGuid(),
+            TaskItemId = task.Id,
+            ChangeType = "Updated",
+            ChangedAtUtc = DateTime.UtcNow,
+            Notes = wasCompleted != existing.IsCompleted 
+                ? $"Completion changed to: {existing.IsCompleted}" 
+                : "Properties updated"
+        });
 
-        return Task.CompletedTask;
+        await db.SaveChangesAsync(cancellationToken);
     }
 
-    public Task LinkTaskToNodeAsync(Guid taskId, Guid projectTreeNodeId, CancellationToken cancellationToken = default)
+    public async Task DeleteTaskAsync(Guid taskId, CancellationToken cancellationToken = default)
     {
-        var existing = _tasks.FirstOrDefault(x => x.Id == taskId);
+        await using var db = _databaseService.CreateDbContext();
+        var task = await db.Tasks.FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
+        if (task is not null)
+        {
+            db.Tasks.Remove(task);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    public async Task AttachTaskToFileAsync(Guid taskId, string filePath, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(filePath)) return;
+        
+        await using var db = _databaseService.CreateDbContext();
+        var existing = await db.Tasks.FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
         if (existing is not null)
         {
-            existing.RelatedProjectTreeNodeId = projectTreeNodeId;
+            existing.AttachedFilePath = NormalizePath(filePath);
+            
+            db.TaskHistoryEntries.Add(new TaskHistoryEntry
+            {
+                Id = Guid.NewGuid(),
+                TaskItemId = taskId,
+                ChangeType = "Attached",
+                ChangedAtUtc = DateTime.UtcNow,
+                Notes = $"Attached to file: {filePath}"
+            });
+            
+            await db.SaveChangesAsync(cancellationToken);
         }
-
-        // TODO: Persist task-tree relation in SQLite to support "Show related tasks in tree" option.
-        return Task.CompletedTask;
-    }
-
-    public Task AttachTaskToFileAsync(Guid taskId, string filePath, CancellationToken cancellationToken = default)
-    {
-        var existing = _tasks.FirstOrDefault(x => x.Id == taskId);
-        if (existing is null || string.IsNullOrWhiteSpace(filePath))
-        {
-            return Task.CompletedTask;
-        }
-
-        var normalizedPath = NormalizePath(filePath);
-        if (!_taskIdsByFilePath.TryGetValue(normalizedPath, out var taskIds))
-        {
-            taskIds = [];
-            _taskIdsByFilePath[normalizedPath] = taskIds;
-        }
-
-        taskIds.Add(taskId);
-        return Task.CompletedTask;
     }
 
     public async Task<TaskItem> CreateAndAttachTaskToFileAsync(string title, string filePath, CancellationToken cancellationToken = default)
     {
         var task = new TaskItem
         {
+            Id = Guid.NewGuid(),
             Title = string.IsNullOrWhiteSpace(title) ? "New Task" : title.Trim(),
             Description = "Task attached from file view",
             DueDateUtc = DateTime.UtcNow.AddDays(1),
-            IsCompleted = false
+            IsCompleted = false,
+            AttachedFilePath = NormalizePath(filePath)
         };
 
         await AddTaskAsync(task, cancellationToken).ConfigureAwait(false);
-        await AttachTaskToFileAsync(task.Id, filePath, cancellationToken).ConfigureAwait(false);
         return task;
     }
 

@@ -57,7 +57,7 @@ public sealed class ProjectService : IProjectService
             ProjectName = request.ProjectName,
             Description = request.Description,
             ProjectDirectoryPath = projectDirectory,
-            RitFilePath = Path.Combine(projectDirectory, "main.rit"),
+            RitFilePath = Path.Combine(projectDirectory, ".reachit.json"),
             TemplateType = request.TemplateType,
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = DateTime.UtcNow
@@ -117,7 +117,7 @@ public sealed class ProjectService : IProjectService
             return null;
         }
 
-        var ritPath = Path.Combine(projectFolderPath, "main.rit");
+        var ritPath = Path.Combine(projectFolderPath, ".reachit.json");
         var meta = await LoadProjectMetaFromRitAsync(ritPath, projectFolderPath, cancellationToken).ConfigureAwait(false);
         if (meta is null)
         {
@@ -212,7 +212,7 @@ public sealed class ProjectService : IProjectService
             }
             catch (JsonException)
             {
-                // TODO: Support legacy .rit formats.
+                // TODO: Support legacy JSON formats.
             }
         }
 

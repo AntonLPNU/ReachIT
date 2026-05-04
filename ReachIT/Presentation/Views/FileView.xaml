@@ -14,9 +14,10 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock Text="{Binding FileName}" FontSize="20" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding FileName}" Style="{StaticResource ReachItPageTitleTextStyle}" FontSize="24" />
 
-        <StackPanel Grid.Row="1" Margin="0,8,0,0">
+        <Border Grid.Row="1" Style="{StaticResource ReachItCardStyle}" Margin="0,12,0,0">
+        <StackPanel>
             <TextBlock Text="{Binding RelativePath, StringFormat=Relative: {0}}" />
             <TextBlock Text="{Binding FullPath, StringFormat=Path: {0}}" TextWrapping="Wrap" />
             <TextBlock Text="{Binding Extension, StringFormat=Extension: {0}}" />
@@ -32,14 +33,15 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="DarkRed" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource NeonPinkBrush}" TextWrapping="Wrap" />
         </StackPanel>
+        </Border>
 
         <WrapPanel Grid.Row="2" Margin="0,8,0,8">
-            <Button Content="Open" Command="{Binding OpenFileCommand}" Margin="0,0,6,6" />
-            <Button Content="Reveal" Command="{Binding RevealInExplorerCommand}" Margin="0,0,6,6" />
-            <Button Content="Attach Task" Command="{Binding AttachTaskCommand}" Margin="0,0,6,6" />
-            <Button Content="Snapshot" Command="{Binding CreateSnapshotCommand}" Margin="0,0,6,6" />
+            <Button Content="↗ Open" Command="{Binding OpenFileCommand}" />
+            <Button Content="▣ Reveal" Command="{Binding RevealInExplorerCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" />
+            <Button Content="+ Attach Task" Command="{Binding AttachTaskCommand}" Margin="0,0,6,6" />
+            <Button Content="◈ Snapshot" Command="{Binding CreateSnapshotCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" />
         </WrapPanel>
 
         <Grid Grid.Row="3">

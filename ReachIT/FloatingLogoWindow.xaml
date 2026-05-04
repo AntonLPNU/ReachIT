@@ -1,0 +1,34 @@
+<Window x:Class="ReachIT.FloatingLogoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ReachIT"
+        Icon="Resources/AppIcon.ico"
+        Width="64"
+        Height="64"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        Topmost="True"
+        ShowInTaskbar="False"
+        SizeToContent="Manual">
+    <Border Width="64"
+            Height="64"
+            CornerRadius="32"
+            Background="#111827"
+            BorderBrush="#334155"
+            BorderThickness="1"
+            Cursor="Hand"
+            MouseLeftButtonDown="Logo_MouseLeftButtonDown"
+            MouseLeftButtonUp="Logo_MouseLeftButtonUp"
+            MouseMove="Logo_MouseMove"
+            MouseRightButtonUp="Logo_MouseRightButtonUp">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="22" ShadowDepth="0" Opacity="0.45" Color="#020617" />
+        </Border.Effect>
+        <Grid>
+            <Ellipse Stroke="{StaticResource ReachItTitleBrush}" StrokeThickness="3" Margin="5" />
+            <Image Source="Resources/AppIcon.png" Width="44" Height="44" Stretch="Uniform" />
+        </Grid>
+    </Border>
+</Window>
