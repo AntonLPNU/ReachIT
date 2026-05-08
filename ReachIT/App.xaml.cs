@@ -18,17 +18,28 @@ public partial class App : System.Windows.Application
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-        _appHost = new AppHost();
-        _appHost.Initialize();
-
-        var logger = _appHost.GetRequiredService<ReachIT.Infrastructure.Logging.ILocalLogger>();
-        logger.LogInformation("ReachIT hub is starting...");
+        LoadingWindow? loadingWindow = null;
+        ReachIT.Infrastructure.Logging.ILocalLogger? logger = null;
 
         try
         {
+            loadingWindow = await ShowLoadingWindowAsync("Готуємо ReachIT...");
+
+            _appHost = new AppHost();
+            _appHost.Initialize();
+
+            logger = _appHost.GetRequiredService<ReachIT.Infrastructure.Logging.ILocalLogger>();
+            logger.LogInformation("ReachIT hub is starting...");
+
+            loadingWindow.ShowStatus("Перевіряємо базу даних...");
             await _appHost.GetRequiredService<IDatabaseService>().InitializeAsync();
+
+            loadingWindow.ShowStatus("Завантажуємо налаштування...");
             var settings = await _appHost.GetRequiredService<IAppSettingsService>().GetAsync();
             LocalizationService.ApplyLanguage(settings.Language);
+
+            CloseLoadingWindow(loadingWindow);
+            loadingWindow = null;
 
             var projectFolderPath = ShowStartupHub();
             if (string.IsNullOrWhiteSpace(projectFolderPath))
@@ -37,11 +48,14 @@ public partial class App : System.Windows.Application
                 return;
             }
 
+            loadingWindow = await ShowLoadingWindowAsync("Відкриваємо проєкт...");
             await _appHost.GetRequiredService<IWindowManagerService>().StartAsync(projectFolderPath);
+            CloseLoadingWindow(loadingWindow);
         }
         catch (Exception ex)
         {
-            logger.LogError("Failed to initialize ReachIT", ex);
+            CloseLoadingWindow(loadingWindow);
+            logger?.LogError("Failed to initialize ReachIT", ex);
             MessageBox.Show("Critical initialization error. See logs for details.", "ReachIT", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown();
         }
@@ -50,6 +64,7 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         _appHost?.GetRequiredService<IGlobalHotkeyService>().Dispose();
+        _appHost?.GetRequiredService<IActivityMonitorService>().Dispose();
         _appHost?.GetRequiredService<ITrayIconService>().Dispose();
         base.OnExit(e);
     }
@@ -64,11 +79,45 @@ public partial class App : System.Windows.Application
         var startViewModel = _appHost.GetRequiredService<StartViewModel>();
         var startWindow = new StartWindow { DataContext = startViewModel };
 
-        startViewModel.RequestCreateProject += (_, _) => OpenCreateProjectWindow(startViewModel, startWindow);
-        startViewModel.RequestOpenSettings += (_, _) => OpenStartupSettingsWindow(startWindow);
+        EventHandler? createHandler = null;
+        EventHandler? accountHandler = null;
+        EventHandler? settingsHandler = null;
+
+        createHandler = (_, _) => OpenCreateProjectWindow(startViewModel, startWindow);
+        accountHandler = async (_, _) =>
+        {
+            OpenAccountWindow(startWindow);
+            await startViewModel.LoadAsync().ConfigureAwait(true);
+        };
+        settingsHandler = (_, _) => OpenStartupSettingsWindow(startWindow);
+
+        startViewModel.RequestCreateProject += createHandler;
+        startViewModel.RequestOpenAccount += accountHandler;
+        startViewModel.RequestOpenSettings += settingsHandler;
 
         var result = startWindow.ShowDialog();
+        startViewModel.RequestCreateProject -= createHandler;
+        startViewModel.RequestOpenAccount -= accountHandler;
+        startViewModel.RequestOpenSettings -= settingsHandler;
         return result == true ? startViewModel.OpenedProjectFolderPath : null;
+    }
+
+    private static async Task<LoadingWindow> ShowLoadingWindowAsync(string status)
+    {
+        var loadingWindow = new LoadingWindow();
+        loadingWindow.ShowStatus(status);
+        loadingWindow.Show();
+
+        await loadingWindow.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        return loadingWindow;
+    }
+
+    private static void CloseLoadingWindow(LoadingWindow? loadingWindow)
+    {
+        if (loadingWindow?.IsVisible == true)
+        {
+            loadingWindow.Close();
+        }
     }
 
     private void OpenCreateProjectWindow(StartViewModel startViewModel, Window owner)
@@ -90,6 +139,20 @@ public partial class App : System.Windows.Application
         {
             startViewModel.CompleteOpen(createViewModel.CreatedProjectFolderPath);
         }
+    }
+
+    private void OpenAccountWindow(Window owner)
+    {
+        if (_appHost is null)
+        {
+            return;
+        }
+
+        var accountWindow = new AccountLoginWindow(_appHost.GetRequiredService<IAccountService>())
+        {
+            Owner = owner
+        };
+        accountWindow.ShowDialog();
     }
 
     private async void OpenStartupSettingsWindow(Window owner)

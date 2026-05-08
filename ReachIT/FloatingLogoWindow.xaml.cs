@@ -38,6 +38,14 @@ public partial class FloatingLogoWindow : Window
     {
     }
 
+    private void Logo_MouseEnter(object sender, MouseEventArgs e)
+    {
+        if (DataContext is FloatingLogoViewModel viewModel && viewModel.ShowMenuCommand.CanExecute(null))
+        {
+            viewModel.ShowMenuCommand.Execute(null);
+        }
+    }
+
     private void Logo_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
     }

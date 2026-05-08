@@ -12,6 +12,7 @@ public partial class StartWindow : Window
         InitializeComponent();
         Loaded += OnLoaded;
         DataContextChanged += OnDataContextChanged;
+        Closed += OnClosed;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -37,7 +38,7 @@ public partial class StartWindow : Window
 
     private void OnRequestClose(object? sender, bool dialogResult)
     {
-        DialogResult = dialogResult;
+        SetDialogResult(dialogResult);
         Close();
     }
 
@@ -64,8 +65,28 @@ public partial class StartWindow : Window
 
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
-        DialogResult = false;
+        SetDialogResult(false);
         Close();
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        if (DataContext is StartViewModel viewModel)
+        {
+            viewModel.RequestClose -= OnRequestClose;
+        }
+    }
+
+    private void SetDialogResult(bool result)
+    {
+        try
+        {
+            DialogResult = result;
+        }
+        catch (InvalidOperationException)
+        {
+            // A stale hidden/closed start window can still receive a view-model event; closing it is enough.
+        }
     }
 
     private void ToggleWindowState()

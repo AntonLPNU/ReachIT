@@ -46,6 +46,17 @@ public sealed class TaskService : ITaskService
         if (task.Id == Guid.Empty) task.Id = Guid.NewGuid();
         
         await using var db = _databaseService.CreateDbContext();
+        if (task.Priority <= 0)
+        {
+            var maxPriority = await db.Tasks
+                .Where(x => x.ParentTaskId == task.ParentTaskId)
+                .Select(x => (int?)x.Priority)
+                .MaxAsync(cancellationToken) ?? 0;
+
+            task.Priority = maxPriority + 1;
+        }
+
+        ApplyCompletionState(task, task.IsCompleted);
         db.Tasks.Add(task);
         
         db.TaskHistoryEntries.Add(new TaskHistoryEntry
@@ -74,10 +85,13 @@ public sealed class TaskService : ITaskService
         existing.Status = task.Status;
         existing.Priority = task.Priority;
         existing.DueDateUtc = task.DueDateUtc;
+        existing.StartedAtUtc = task.StartedAtUtc;
+        existing.CompletedAtUtc = task.CompletedAtUtc;
         existing.ParentTaskId = task.ParentTaskId;
         existing.CategoryId = task.CategoryId;
         existing.RelatedProjectTreeNodeId = task.RelatedProjectTreeNodeId;
         existing.AttachedFilePath = task.AttachedFilePath;
+        ApplyCompletionState(existing, wasCompleted);
         
         db.TaskHistoryEntries.Add(new TaskHistoryEntry
         {
@@ -152,6 +166,22 @@ public sealed class TaskService : ITaskService
         catch
         {
             return path;
+        }
+    }
+
+    private static void ApplyCompletionState(TaskItem task, bool wasCompleted)
+    {
+        if (task.IsCompleted)
+        {
+            task.Status = "Done";
+            task.CompletedAtUtc ??= DateTime.UtcNow;
+            task.StartedAtUtc ??= task.CompletedAtUtc;
+            return;
+        }
+
+        if (wasCompleted)
+        {
+            task.CompletedAtUtc = null;
         }
     }
 }

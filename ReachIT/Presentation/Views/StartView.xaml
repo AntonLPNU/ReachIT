@@ -37,6 +37,12 @@
                     <TextBlock Text="{DynamicResource Start.CreateProject}" />
                 </StackPanel>
             </Button>
+            <Button Command="{Binding OpenAccountCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconMaterial Kind="AccountCircle" Width="16" Height="16" Margin="0,0,8,0" />
+                    <TextBlock Text="{Binding AccountStatusText}" />
+                </StackPanel>
+            </Button>
             <Button Command="{Binding OpenSettingsCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}">
                 <StackPanel Orientation="Horizontal">
                     <iconPacks:PackIconMaterial Kind="Cog" Width="16" Height="16" Margin="0,0,8,0" />

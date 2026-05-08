@@ -11,6 +11,7 @@ public partial class CreateProjectWindow : Window
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        Closed += OnClosed;
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -30,13 +31,13 @@ public partial class CreateProjectWindow : Window
 
     private void OnRequestCreated(object? sender, string ritPath)
     {
-        DialogResult = true;
+        SetDialogResult(true);
         Close();
     }
 
     private void OnRequestCancel(object? sender, EventArgs e)
     {
-        DialogResult = false;
+        SetDialogResult(false);
         Close();
     }
 
@@ -47,7 +48,28 @@ public partial class CreateProjectWindow : Window
 
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
-        DialogResult = false;
+        SetDialogResult(false);
         Close();
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        if (DataContext is CreateProjectViewModel viewModel)
+        {
+            viewModel.RequestCreated -= OnRequestCreated;
+            viewModel.RequestCancel -= OnRequestCancel;
+        }
+    }
+
+    private void SetDialogResult(bool result)
+    {
+        try
+        {
+            DialogResult = result;
+        }
+        catch (InvalidOperationException)
+        {
+            // Window can be hosted or already closing; closing without a dialog result is still a safe cancel path.
+        }
     }
 }

@@ -21,6 +21,8 @@
             <TextBlock Text="{Binding RelativePath, StringFormat=Relative: {0}}" />
             <TextBlock Text="{Binding FullPath, StringFormat=Path: {0}}" TextWrapping="Wrap" />
             <TextBlock Text="{Binding Extension, StringFormat=Extension: {0}}" />
+            <TextBlock Text="{Binding FileKind, StringFormat=Kind: {0}}" />
+            <TextBlock Text="{Binding ReadCapability, StringFormat=Read mode: {0}}" />
             <TextBlock Text="{Binding FileSizeText, StringFormat=Size: {0}}" />
             <TextBlock Text="{Binding CreatedAtText, StringFormat=Created: {0}}" />
             <TextBlock Text="{Binding LastModifiedText, StringFormat=Modified: {0}}" />

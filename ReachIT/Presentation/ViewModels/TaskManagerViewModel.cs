@@ -1,10 +1,7 @@
 // Provides task manager commands and list state.
 using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.IO;
 using System.Windows;
 using System.Windows.Input;
-using Microsoft.VisualBasic;
 using ReachIT.Application.Contracts;
 using ReachIT.Domain.Models;
 using ReachIT.Presentation.Commands;
@@ -14,15 +11,10 @@ namespace ReachIT.Presentation.ViewModels;
 public sealed class TaskManagerViewModel : ViewModelBase
 {
     private readonly ITaskService _taskService;
-    private readonly IProjectService _projectService;
-    private readonly IGitService _gitService;
     private readonly AsyncCommand _editTaskCommand;
     private readonly AsyncCommand _deleteTaskCommand;
     private readonly AsyncCommand _markCompletedCommand;
-    private readonly AsyncCommand _gitInitCommand;
-    private readonly AsyncCommand _gitStatusCommand;
-    private readonly AsyncCommand _gitStageAllCommand;
-    private readonly AsyncCommand _gitCommitCommand;
+    private readonly AsyncCommand _markTaskCompletedCommand;
     private TaskItem? _selectedTask;
     private string _editTitle = string.Empty;
     private string _editDescription = string.Empty;
@@ -36,31 +28,21 @@ public sealed class TaskManagerViewModel : ViewModelBase
     private string _deadlineValidationMessage = string.Empty;
     private string _searchText = string.Empty;
     private bool _showActiveOnly;
-    private string _gitStatusText = "Open a project to use Git controls.";
 
-    public TaskManagerViewModel(ITaskService taskService, IProjectService projectService, IGitService gitService)
+    public TaskManagerViewModel(ITaskService taskService)
     {
         _taskService = taskService;
-        _projectService = projectService;
-        _gitService = gitService;
 
         AddTaskCommand = new AsyncCommand(_ => AddTaskAsync());
         _editTaskCommand = new AsyncCommand(_ => EditTaskAsync(), _ => SelectedTask is not null);
         _deleteTaskCommand = new AsyncCommand(_ => DeleteTaskAsync(), _ => SelectedTask is not null);
         _markCompletedCommand = new AsyncCommand(_ => MarkCompletedAsync(), _ => SelectedTask is not null && !SelectedTask.IsCompleted);
-        _gitInitCommand = new AsyncCommand(_ => GitInitAsync());
-        _gitStatusCommand = new AsyncCommand(_ => GitStatusAsync());
-        _gitStageAllCommand = new AsyncCommand(_ => GitStageAllAsync());
-        _gitCommitCommand = new AsyncCommand(_ => GitCommitAsync());
+        _markTaskCompletedCommand = new AsyncCommand(p => MarkTaskCompletedAsync(p as TaskItem));
 
         EditTaskCommand = _editTaskCommand;
         DeleteTaskCommand = _deleteTaskCommand;
         MarkCompletedCommand = _markCompletedCommand;
-        GitInitCommand = _gitInitCommand;
-        GitStatusCommand = _gitStatusCommand;
-        GitStageAllCommand = _gitStageAllCommand;
-        GitCommitCommand = _gitCommitCommand;
-        OpenProjectFolderCommand = new RelayCommand(_ => OpenProjectFolder());
+        MarkTaskCompletedCommand = _markTaskCompletedCommand;
         SetDeadlineTodayCommand = new RelayCommand(_ => EditDeadlineDate = DateTime.Today);
         SetDeadlineTomorrowCommand = new RelayCommand(_ => EditDeadlineDate = DateTime.Today.AddDays(1));
         ClearDeadlineCommand = new RelayCommand(_ => EditDeadlineDate = null);
@@ -72,6 +54,7 @@ public sealed class TaskManagerViewModel : ViewModelBase
 
     public ObservableCollection<TaskItem> Tasks { get; } = new();
     public ObservableCollection<TaskItem> FilteredTasks { get; } = new();
+    public ObservableCollection<TaskItem> TreeTasks { get; } = new();
 
     public string SearchText
     {
@@ -174,33 +157,24 @@ public sealed class TaskManagerViewModel : ViewModelBase
         private set => SetProperty(ref _deadlineValidationMessage, value);
     }
 
-    public string GitStatusText
-    {
-        get => _gitStatusText;
-        private set => SetProperty(ref _gitStatusText, value);
-    }
-
     public ICommand AddTaskCommand { get; }
     public ICommand EditTaskCommand { get; }
     public ICommand DeleteTaskCommand { get; }
     public ICommand MarkCompletedCommand { get; }
+    public ICommand MarkTaskCompletedCommand { get; }
     public ICommand SetDeadlineTodayCommand { get; }
     public ICommand SetDeadlineTomorrowCommand { get; }
     public ICommand ClearDeadlineCommand { get; }
     public ICommand SaveAllCommand { get; }
     public ICommand AddSubtaskCommand { get; }
     public ICommand DiscardChangesCommand { get; }
-    public ICommand GitInitCommand { get; }
-    public ICommand GitStatusCommand { get; }
-    public ICommand GitStageAllCommand { get; }
-    public ICommand GitCommitCommand { get; }
-    public ICommand OpenProjectFolderCommand { get; }
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
         Tasks.Clear();
         var tasks = await _taskService.GetTasksAsync(cancellationToken).ConfigureAwait(true);
         var ordered = OrderTasksForHierarchy(tasks).ToList();
+        await NormalizeQueueStateAsync(ordered, cancellationToken).ConfigureAwait(true);
 
         OverdueTasksCount = ordered.Count(x => !x.IsCompleted && x.DueDateUtc.HasValue && x.DueDateUtc.Value.ToLocalTime() < DateTime.Now);
         DueTodayCount = ordered.Count(x => !x.IsCompleted && x.DueDateUtc.HasValue && x.DueDateUtc.Value.ToLocalTime().Date == DateTime.Today);
@@ -236,6 +210,12 @@ public sealed class TaskManagerViewModel : ViewModelBase
     private void ApplyFilter()
     {
         FilteredTasks.Clear();
+        TreeTasks.Clear();
+        foreach (var task in Tasks)
+        {
+            task.Subtasks.Clear();
+        }
+
         var query = Tasks.AsEnumerable();
 
         if (ShowActiveOnly)
@@ -254,6 +234,11 @@ public sealed class TaskManagerViewModel : ViewModelBase
             FilteredTasks.Add(t);
         }
 
+        foreach (var root in BuildTaskTree(FilteredTasks))
+        {
+            TreeTasks.Add(root);
+        }
+
         OnPropertyChanged(nameof(EmptyStateVisibility));
     }
 
@@ -267,8 +252,9 @@ public sealed class TaskManagerViewModel : ViewModelBase
             .GroupBy(x => x.ParentTaskId.HasValue && taskIds.Contains(x.ParentTaskId.Value)
                 ? x.ParentTaskId.Value
                 : rootId)
-            .ToDictionary(x => x.Key, x => x
+                .ToDictionary(x => x.Key, x => x
                 .OrderBy(t => t.IsCompleted)
+                .ThenBy(t => t.Priority <= 0 ? int.MaxValue : t.Priority)
                 .ThenBy(t => t.DueDateUtc ?? DateTime.MaxValue)
                 .ThenBy(t => t.Title, StringComparer.OrdinalIgnoreCase)
                 .ToList());
@@ -306,6 +292,52 @@ public sealed class TaskManagerViewModel : ViewModelBase
         }
     }
 
+    private static IEnumerable<TaskItem> BuildTaskTree(IEnumerable<TaskItem> source)
+    {
+        var taskList = source.ToList();
+        var taskIds = taskList.Select(x => x.Id).ToHashSet();
+        var byParent = taskList
+            .GroupBy(x => x.ParentTaskId.HasValue && taskIds.Contains(x.ParentTaskId.Value)
+                ? x.ParentTaskId.Value
+                : Guid.Empty)
+                .ToDictionary(x => x.Key, x => x
+                .OrderBy(t => t.IsCompleted)
+                .ThenBy(t => t.Priority <= 0 ? int.MaxValue : t.Priority)
+                .ThenBy(t => t.DueDateUtc ?? DateTime.MaxValue)
+                .ThenBy(t => t.Title, StringComparer.OrdinalIgnoreCase)
+                .ToList());
+
+        return AttachChildren(Guid.Empty, byParent, new HashSet<Guid>());
+    }
+
+    private static IEnumerable<TaskItem> AttachChildren(
+        Guid parentId,
+        IReadOnlyDictionary<Guid, List<TaskItem>> byParent,
+        HashSet<Guid> visited)
+    {
+        if (!byParent.TryGetValue(parentId, out var children))
+        {
+            yield break;
+        }
+
+        foreach (var child in children)
+        {
+            if (!visited.Add(child.Id))
+            {
+                continue;
+            }
+
+            child.DisplayTitle = child.Title;
+            child.Subtasks.Clear();
+            foreach (var descendant in AttachChildren(child.Id, byParent, visited))
+            {
+                child.Subtasks.Add(descendant);
+            }
+
+            yield return child;
+        }
+    }
+
     private async Task AddTaskAsync()
     {
         var newTask = new TaskItem
@@ -313,6 +345,7 @@ public sealed class TaskManagerViewModel : ViewModelBase
             Title = "New Task",
             Description = "Define task details",
             IsCompleted = false,
+            Priority = 0,
             DueDateUtc = DateTime.UtcNow.Date.AddDays(1).AddHours(20)
         };
 
@@ -340,7 +373,17 @@ public sealed class TaskManagerViewModel : ViewModelBase
         SelectedTask.Description = EditDescription?.Trim() ?? string.Empty;
         SelectedTask.IsCompleted = EditIsCompleted;
         SelectedTask.Priority = EditPriority;
-        SelectedTask.Status = EditStatus?.Trim() ?? "To Do";
+        if (SelectedTask.IsCompleted)
+        {
+            SelectedTask.Status = "Done";
+            SelectedTask.CompletedAtUtc ??= DateTime.UtcNow;
+            SelectedTask.StartedAtUtc ??= SelectedTask.CompletedAtUtc;
+        }
+        else if (SelectedTask.CompletedAtUtc.HasValue)
+        {
+            SelectedTask.CompletedAtUtc = null;
+        }
+
         SelectedTask.DueDateUtc = EditDeadlineDate.HasValue
             ? DateTime.SpecifyKind(EditDeadlineDate.Value.Date.AddHours(23).AddMinutes(59), DateTimeKind.Local).ToUniversalTime()
             : null;
@@ -380,7 +423,8 @@ public sealed class TaskManagerViewModel : ViewModelBase
         var sub = new TaskItem
         {
             Title = "New Subtask",
-            ParentTaskId = SelectedTask.Id
+            ParentTaskId = SelectedTask.Id,
+            Priority = 0
         };
         await _taskService.AddTaskAsync(sub).ConfigureAwait(true);
         await LoadAsync().ConfigureAwait(true);
@@ -399,105 +443,59 @@ public sealed class TaskManagerViewModel : ViewModelBase
 
     private async Task MarkCompletedAsync()
     {
-        if (SelectedTask is null)
+        await MarkTaskCompletedAsync(SelectedTask).ConfigureAwait(true);
+    }
+
+    private async Task MarkTaskCompletedAsync(TaskItem? task)
+    {
+        if (task is null || task.IsCompleted)
         {
             return;
         }
 
-        SelectedTask.IsCompleted = true;
-        await _taskService.UpdateTaskAsync(SelectedTask).ConfigureAwait(true);
+        SelectedTask = task;
+        task.IsCompleted = true;
+        task.Status = "Done";
+        task.CompletedAtUtc = DateTime.UtcNow;
+        task.StartedAtUtc ??= task.CompletedAtUtc;
+        await _taskService.UpdateTaskAsync(task).ConfigureAwait(true);
         await LoadAsync().ConfigureAwait(true);
     }
 
-    private async Task GitInitAsync()
+    private async Task NormalizeQueueStateAsync(IReadOnlyList<TaskItem> ordered, CancellationToken cancellationToken)
     {
-        await RunGitAndShowSummaryAsync(["init"], "Git repository initialized.").ConfigureAwait(true);
-    }
-
-    private async Task GitStatusAsync()
-    {
-        await RunGitAndShowSummaryAsync(["status", "--short"], "Git status refreshed.").ConfigureAwait(true);
-    }
-
-    private async Task GitStageAllAsync()
-    {
-        await RunGitAndShowSummaryAsync(["add", "."], "All project changes staged.").ConfigureAwait(true);
-        await RunGitAndShowSummaryAsync(["status", "--short"], "Git status refreshed.").ConfigureAwait(true);
-    }
-
-    private async Task GitCommitAsync()
-    {
-        var message = Interaction.InputBox("Commit message:", "ReachIT Git Commit", "Project checkpoint");
-        if (string.IsNullOrWhiteSpace(message))
+        var active = ordered.FirstOrDefault(x => !x.IsCompleted);
+        foreach (var task in ordered)
         {
-            return;
-        }
+            var originalStatus = task.Status;
+            var originalStartedAt = task.StartedAtUtc;
+            var originalCompletedAt = task.CompletedAtUtc;
 
-        await RunGitAndShowSummaryAsync(["commit", "-m", message.Trim()], "Commit created.").ConfigureAwait(true);
-    }
-
-    private void OpenProjectFolder()
-    {
-        var path = GetProjectDirectoryOrShowMessage();
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return;
-        }
-
-        try
-        {
-            Process.Start(new ProcessStartInfo
+            if (task.IsCompleted)
             {
-                FileName = path,
-                UseShellExecute = true
-            });
-        }
-        catch (Exception ex)
-        {
-            GitStatusText = ex.Message;
-            MessageBox.Show(ex.Message, "ReachIT Git", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-    }
-
-    private async Task RunGitAndShowSummaryAsync(IReadOnlyList<string> arguments, string successMessage)
-    {
-        var path = GetProjectDirectoryOrShowMessage();
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return;
-        }
-
-        try
-        {
-            var result = await _gitService.RunAsync(path, arguments).ConfigureAwait(true);
-            if (result.ExitCode != 0)
+                task.Status = "Done";
+                task.CompletedAtUtc ??= DateTime.UtcNow;
+                task.StartedAtUtc ??= task.CompletedAtUtc;
+            }
+            else if (active is not null && task.Id == active.Id)
             {
-                throw new InvalidOperationException(string.IsNullOrWhiteSpace(result.Error)
-                    ? result.Output
-                    : result.Error);
+                task.Status = "In Progress";
+                task.StartedAtUtc ??= DateTime.UtcNow;
+                task.CompletedAtUtc = null;
+            }
+            else
+            {
+                task.Status = "Queued";
+                task.CompletedAtUtc = null;
             }
 
-            GitStatusText = string.IsNullOrWhiteSpace(result.CombinedOutput)
-                ? successMessage
-                : result.CombinedOutput.Trim();
+            if (!string.Equals(originalStatus, task.Status, StringComparison.Ordinal) ||
+                originalStartedAt != task.StartedAtUtc ||
+                originalCompletedAt != task.CompletedAtUtc)
+            {
+                await _taskService.UpdateTaskAsync(task, cancellationToken).ConfigureAwait(true);
+            }
         }
-        catch (Exception ex)
-        {
-            GitStatusText = ex.Message;
-            MessageBox.Show(ex.Message, "ReachIT Git", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-    }
-
-    private string? GetProjectDirectoryOrShowMessage()
-    {
-        var path = _projectService.CurrentProject?.ProjectDirectoryPath;
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            GitStatusText = "Open a project first.";
-            return null;
-        }
-
-        return path;
     }
 
     private void PopulateEditorFromSelection()

@@ -1,0 +1,79 @@
+<Window x:Class="ReachIT.LoadingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ReachIT"
+        Icon="Resources/AppIcon.ico"
+        Width="520"
+        Height="320"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <Border Background="{StaticResource ReachItWindowBackgroundBrush}"
+            BorderBrush="{StaticResource ReachItBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="0">
+        <Grid Margin="30">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+                <Border Width="72"
+                        Height="72"
+                        Background="{StaticResource ReachItHeroBrush}"
+                        BorderBrush="#80FFFFFF"
+                        BorderThickness="1"
+                        CornerRadius="16"
+                        Padding="10">
+                    <Image Source="Resources/AppIcon.png" Stretch="Uniform" />
+                </Border>
+                <StackPanel Margin="18,8,0,0">
+                    <TextBlock Text="ReachIT"
+                               Foreground="White"
+                               FontSize="30"
+                               FontWeight="Bold"
+                               LineHeight="36" />
+                    <TextBlock x:Name="StatusText"
+                               Text="Завантаження..."
+                               Foreground="{StaticResource SkyAquaBrush}"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Margin="1,4,0,0" />
+                </StackPanel>
+            </StackPanel>
+
+            <Border Grid.Row="1"
+                    Margin="0,28,0,22"
+                    Padding="18"
+                    Background="{StaticResource ReachItSoftSurfaceBrush}"
+                    BorderBrush="{StaticResource ReachItBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Порада для проєкту"
+                               Foreground="{StaticResource ReachItMutedBrush}"
+                               FontSize="12"
+                               FontWeight="SemiBold" />
+                    <TextBlock x:Name="TipText"
+                               Grid.Row="1"
+                               TextWrapping="Wrap"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               LineHeight="25"
+                               Margin="0,10,0,0" />
+                </Grid>
+            </Border>
+
+            <ProgressBar Grid.Row="2"
+                         Height="8"
+                         IsIndeterminate="True" />
+        </Grid>
+    </Border>
+</Window>

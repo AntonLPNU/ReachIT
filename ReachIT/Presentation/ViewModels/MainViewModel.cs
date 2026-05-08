@@ -16,6 +16,8 @@ public sealed class MainViewModel : ViewModelBase
     private readonly IExternalResourceService _externalResourceService;
     private readonly IFileSystemProjectExplorerService _fileSystemProjectExplorerService;
     private readonly IWorkUnitService _workUnitService;
+    private readonly IAccountService _accountService;
+    private readonly IActivityMonitorService _activityMonitorService;
     private readonly INavigationService _navigationService;
     private readonly IDialogService _dialogService;
     private readonly RelayCommand _goBackCommand;
@@ -23,18 +25,24 @@ public sealed class MainViewModel : ViewModelBase
 
     private object? _currentWorkspaceViewModel;
     private bool _isAppBarModeEnabled;
+    private string _selectedNodeIgnoreLabel = "Ignore in activity tracking";
+    private string _accountStatusText = $"{ResourceText("Account.StatusPrefix", "Account")}: {ResourceText("Account.LocalUser", "Local User")}";
 
     public event EventHandler? RequestToggleSidePanel;
     public event EventHandler? RequestHideSidePanel;
     public event EventHandler? RequestOpenMainWorkspace;
     public event EventHandler? RequestToggleAppBarMode;
     public event EventHandler? RequestExitApplication;
+    public event EventHandler? RequestOpenAccount;
+    public event EventHandler? RequestOpenDeveloperTestPanel;
+    public event EventHandler? RequestCloseProject;
 
     public MainViewModel(
         IProjectService projectService,
         IExternalResourceService externalResourceService,
         IFileSystemProjectExplorerService fileSystemProjectExplorerService,
         IWorkUnitService workUnitService,
+        IAccountService accountService,
         INavigationService navigationService,
         IDialogService dialogService,
         ProjectTreeViewModel projectTreeViewModel,
@@ -47,12 +55,16 @@ public sealed class MainViewModel : ViewModelBase
         PlanningViewModel planningViewModel,
         VersionsViewModel versionsViewModel,
         SettingsViewModel settingsViewModel,
-        FocusModeViewModel focusModeViewModel)
+        FocusModeViewModel focusModeViewModel,
+        ActivityDashboardViewModel activityDashboardViewModel,
+        IActivityMonitorService activityMonitorService)
     {
         _projectService = projectService;
         _externalResourceService = externalResourceService;
         _fileSystemProjectExplorerService = fileSystemProjectExplorerService;
         _workUnitService = workUnitService;
+        _accountService = accountService;
+        _activityMonitorService = activityMonitorService;
         _navigationService = navigationService;
         _dialogService = dialogService;
 
@@ -68,6 +80,7 @@ public sealed class MainViewModel : ViewModelBase
         VersionsViewModel = versionsViewModel;
         SettingsViewModel = settingsViewModel;
         FocusModeViewModel = focusModeViewModel;
+        ActivityDashboardViewModel = activityDashboardViewModel;
 
         OpenProjectCommand = new AsyncCommand(_ => OpenProjectAsync());
         SaveCommand = new AsyncCommand(_ => _projectService.SaveProjectAsync());
@@ -76,6 +89,9 @@ public sealed class MainViewModel : ViewModelBase
         OpenMainWorkspaceCommand = new RelayCommand(_ => RequestOpenMainWorkspace?.Invoke(this, EventArgs.Empty));
         ToggleAppBarModeCommand = new RelayCommand(_ => RequestToggleAppBarMode?.Invoke(this, EventArgs.Empty));
         ExitApplicationCommand = new RelayCommand(_ => RequestExitApplication?.Invoke(this, EventArgs.Empty));
+        OpenAccountCommand = new RelayCommand(_ => RequestOpenAccount?.Invoke(this, EventArgs.Empty));
+        OpenDeveloperTestPanelCommand = new RelayCommand(_ => RequestOpenDeveloperTestPanel?.Invoke(this, EventArgs.Empty));
+        CloseProjectCommand = new RelayCommand(_ => RequestCloseProject?.Invoke(this, EventArgs.Empty));
 
         NewFileCommand = new AsyncCommand(_ => CreateNewFileAsync());
         NewFolderCommand = new AsyncCommand(_ => CreateNewFolderAsync());
@@ -84,6 +100,7 @@ public sealed class MainViewModel : ViewModelBase
         RevealSelectedNodeCommand = new RelayCommand(_ => RevealSelectedNode());
         RenameSelectedNodeCommand = new AsyncCommand(_ => RenameSelectedNodeAsync());
         DeleteSelectedNodeCommand = new AsyncCommand(_ => DeleteSelectedNodeAsync());
+        ToggleSelectedNodeIgnoredCommand = new AsyncCommand(_ => ToggleSelectedNodeIgnoredAsync());
         CollapseAllCommand = new RelayCommand(_ => ProjectTreeViewModel.CollapseAll());
         MoreActionsCommand = new RelayCommand(_ =>
         {
@@ -103,6 +120,11 @@ public sealed class MainViewModel : ViewModelBase
         OpenVersionsCommand = new RelayCommand(_ => Navigate(VersionsViewModel));
         OpenSettingsCommand = new RelayCommand(_ => Navigate(SettingsViewModel));
         OpenMainViewCommand = new RelayCommand(_ => Navigate(MainDashboardViewModel));
+        OpenActivityCommand = new AsyncCommand(async _ =>
+        {
+            await ActivityDashboardViewModel.LoadAsync().ConfigureAwait(true);
+            Navigate(ActivityDashboardViewModel);
+        });
         OpenProjectInfoCommand = new RelayCommand(_ => Navigate(ProjectInfoViewModel));
         OpenFocusCommand = new RelayCommand(_ => Navigate(FocusModeViewModel));
         _goBackCommand = new RelayCommand(_ => GoBack(), _ => _navigationService.CanGoBack);
@@ -113,11 +135,19 @@ public sealed class MainViewModel : ViewModelBase
         StartFocusCommand = new AsyncCommand(_ =>
         {
             FocusModeViewModel.StartCommand.Execute(null);
+            if (_projectService.CurrentProject is not null)
+            {
+                _ = _activityMonitorService.RecordManualEventAsync(_projectService.CurrentProject, ActivityEventType.FocusStarted);
+            }
             return Task.CompletedTask;
         });
         StopFocusCommand = new AsyncCommand(_ =>
         {
             FocusModeViewModel.StopCommand.Execute(null);
+            if (_projectService.CurrentProject is not null)
+            {
+                _ = _activityMonitorService.RecordManualEventAsync(_projectService.CurrentProject, ActivityEventType.FocusStopped);
+            }
             return Task.CompletedTask;
         });
 
@@ -159,6 +189,7 @@ public sealed class MainViewModel : ViewModelBase
     public VersionsViewModel VersionsViewModel { get; }
     public SettingsViewModel SettingsViewModel { get; }
     public FocusModeViewModel FocusModeViewModel { get; }
+    public ActivityDashboardViewModel ActivityDashboardViewModel { get; }
 
     public object? CurrentWorkspaceViewModel
     {
@@ -172,6 +203,12 @@ public sealed class MainViewModel : ViewModelBase
         private set => SetProperty(ref _isAppBarModeEnabled, value);
     }
 
+    public string AccountStatusText
+    {
+        get => _accountStatusText;
+        private set => SetProperty(ref _accountStatusText, value);
+    }
+
     public ICommand OpenProjectCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand SaveAllCommand { get; }
@@ -179,11 +216,15 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand OpenMainWorkspaceCommand { get; }
     public ICommand ToggleAppBarModeCommand { get; }
     public ICommand ExitApplicationCommand { get; }
+    public ICommand OpenAccountCommand { get; }
+    public ICommand OpenDeveloperTestPanelCommand { get; }
+    public ICommand CloseProjectCommand { get; }
     public ICommand NewFileCommand { get; }
     public ICommand NewFolderCommand { get; }
     public ICommand RefreshTreeCommand { get; }
     public ICommand RenameSelectedNodeCommand { get; }
     public ICommand DeleteSelectedNodeCommand { get; }
+    public ICommand ToggleSelectedNodeIgnoredCommand { get; }
     public ICommand OpenSelectedNodeCommand { get; }
     public ICommand RevealSelectedNodeCommand { get; }
     public ICommand CollapseAllCommand { get; }
@@ -197,6 +238,7 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand OpenVersionsCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand OpenMainViewCommand { get; }
+    public ICommand OpenActivityCommand { get; }
     public ICommand OpenProjectInfoCommand { get; }
     public ICommand OpenFocusCommand { get; }
     public ICommand GoBackCommand { get; }
@@ -205,14 +247,33 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand StopFocusCommand { get; }
     public ICommand SelectTreeNodeCommand { get; }
 
+    public string SelectedNodeIgnoreLabel
+    {
+        get => _selectedNodeIgnoreLabel;
+        private set => SetProperty(ref _selectedNodeIgnoreLabel, value);
+    }
+
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
+        await RefreshAccountStatusAsync(cancellationToken).ConfigureAwait(true);
         await SettingsViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
+        await FocusModeViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
         ProjectTreeViewModel.SetNodes(await _projectService.GetCurrentTreeAsync(cancellationToken).ConfigureAwait(true), preserveState: false);
         await MainDashboardViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
+        await ActivityDashboardViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
         await TaskManagerViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
         await StatisticsViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
         await RecentExternalFilesPanelViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
+        if (_projectService.CurrentProject is not null)
+        {
+            await _activityMonitorService.StartAsync(_projectService.CurrentProject, cancellationToken).ConfigureAwait(true);
+        }
+    }
+
+    public async Task RefreshAccountStatusAsync(CancellationToken cancellationToken = default)
+    {
+        var account = await _accountService.GetAccountStateAsync(cancellationToken).ConfigureAwait(true);
+        AccountStatusText = $"{ResourceText("Account.StatusPrefix", "Account")}: {account.User.DisplayName} ({account.Subscription.PlanType})";
     }
 
     public void SetAppBarMode(bool enabled)
@@ -252,6 +313,7 @@ public sealed class MainViewModel : ViewModelBase
         }
 
         ProjectTreeViewModel.SelectedNode = node;
+        UpdateSelectedNodeIgnoreState();
 
         switch (node.NodeType)
         {
@@ -363,11 +425,13 @@ public sealed class MainViewModel : ViewModelBase
                 preferredSelectedPath: createdNode.FullPath,
                 additionalExpandedPaths: [parentDirectoryPath])
                 .ConfigureAwait(true);
+            await FocusModeViewModel.AddRecommendedApplicationsForPathAsync(createdNode.FullPath).ConfigureAwait(true);
             await MainDashboardViewModel.LoadAsync().ConfigureAwait(true);
             return;
         }
 
         SelectTreeNode(ProjectTreeViewModel.SelectedNode);
+        await FocusModeViewModel.AddRecommendedApplicationsForPathAsync(createdNode.FullPath).ConfigureAwait(true);
         await MainDashboardViewModel.LoadAsync().ConfigureAwait(true);
     }
 
@@ -433,7 +497,11 @@ public sealed class MainViewModel : ViewModelBase
             _fileSystemProjectExplorerService.OpenWithDefaultApp(selectedNode);
             if (_projectService.CurrentProject is not null)
             {
-                await _workUnitService.RecordFileActivityAsync(_projectService.CurrentProject, selectedNode.FullPath).ConfigureAwait(true);
+                if (FocusModeViewModel.IsActive)
+                {
+                    await _workUnitService.RecordFileActivityAsync(_projectService.CurrentProject, selectedNode.FullPath).ConfigureAwait(true);
+                }
+
                 await MainDashboardViewModel.LoadAsync().ConfigureAwait(true);
             }
 
@@ -603,6 +671,48 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    private async Task ToggleSelectedNodeIgnoredAsync()
+    {
+        var selectedNode = ProjectTreeViewModel.SelectedNode;
+        var project = _projectService.CurrentProject;
+        if (selectedNode is null || project is null || string.IsNullOrWhiteSpace(selectedNode.FullPath))
+        {
+            return;
+        }
+
+        var ignoreKey = GetIgnoreKey(project, selectedNode);
+        if (string.IsNullOrWhiteSpace(ignoreKey))
+        {
+            return;
+        }
+
+        var ignoredItems = ParseSettingsList(SettingsViewModel.UseProjectActivitySettings
+            ? SettingsViewModel.ProjectIgnoredFolders
+            : SettingsViewModel.IgnoredFolders);
+        if (ignoredItems.Remove(ignoreKey))
+        {
+            // Removed below.
+        }
+        else
+        {
+            ignoredItems.Add(ignoreKey);
+        }
+
+        var updatedIgnoredItems = string.Join(';', ignoredItems.OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
+        if (SettingsViewModel.UseProjectActivitySettings)
+        {
+            SettingsViewModel.ProjectIgnoredFolders = updatedIgnoredItems;
+        }
+        else
+        {
+            SettingsViewModel.IgnoredFolders = updatedIgnoredItems;
+        }
+
+        await SettingsViewModel.SaveAsync().ConfigureAwait(true);
+        await _activityMonitorService.ReloadSettingsAsync().ConfigureAwait(true);
+        UpdateSelectedNodeIgnoreState();
+    }
+
     private static string ResolveTargetDirectoryPath(string projectDirectoryPath, ProjectTreeNode? selectedNode)
     {
         if (selectedNode is null || selectedNode.IsExternal)
@@ -619,6 +729,53 @@ public sealed class MainViewModel : ViewModelBase
         return string.IsNullOrWhiteSpace(parentDirectory)
             ? projectDirectoryPath
             : parentDirectory;
+    }
+
+    private void UpdateSelectedNodeIgnoreState()
+    {
+        var selectedNode = ProjectTreeViewModel.SelectedNode;
+        var project = _projectService.CurrentProject;
+        if (selectedNode is null || project is null)
+        {
+            SelectedNodeIgnoreLabel = "Ignore in activity tracking";
+            return;
+        }
+
+        var ignoreKey = GetIgnoreKey(project, selectedNode);
+        var ignoredItems = ParseSettingsList(SettingsViewModel.UseProjectActivitySettings
+            ? SettingsViewModel.ProjectIgnoredFolders
+            : SettingsViewModel.IgnoredFolders);
+        SelectedNodeIgnoreLabel = ignoredItems.Contains(ignoreKey)
+            ? "Track this item again"
+            : "Ignore in activity tracking";
+    }
+
+    private static HashSet<string> ParseSettingsList(string value)
+    {
+        return value
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string GetIgnoreKey(ProjectMeta project, ProjectTreeNode node)
+    {
+        if (string.IsNullOrWhiteSpace(node.FullPath))
+        {
+            return node.Name;
+        }
+
+        try
+        {
+            var relative = Path.GetRelativePath(project.ProjectDirectoryPath, node.FullPath);
+            return relative == "."
+                ? node.Name
+                : relative.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+        }
+        catch
+        {
+            return node.Name;
+        }
     }
 
     private void Navigate(object target)
@@ -639,5 +796,10 @@ public sealed class MainViewModel : ViewModelBase
     private void OnNavigated(object? sender, object? target)
     {
         CurrentWorkspaceViewModel = target;
+    }
+
+    private static string ResourceText(string key, string fallback)
+    {
+        return System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
     }
 }

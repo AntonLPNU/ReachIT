@@ -1,6 +1,10 @@
 // Provides dashboard state for the main workspace landing view.
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using System.Windows;
 using System.Windows.Input;
+using Microsoft.VisualBasic;
 using ReachIT.Application.Contracts;
 using ReachIT.Domain.Models;
 using ReachIT.Presentation.Commands;
@@ -16,6 +20,7 @@ public sealed class MainDashboardViewModel : ViewModelBase
     private readonly IExternalResourceService _externalResourceService;
     private readonly IFocusModeService _focusModeService;
     private readonly IProjectProgressService _projectProgressService;
+    private readonly IGitService _gitService;
 
     private ProjectDashboardData _dashboardData = new();
     private string _statusText = "No project opened";
@@ -46,6 +51,7 @@ public sealed class MainDashboardViewModel : ViewModelBase
     private double _focusMinutesToday;
     private string _currentWorkContext = string.Empty;
     private string _emptyTaskMessage = "No tasks yet. Create your first task to start planning.";
+    private string _gitStatusText = "Open a project to use Git controls.";
 
     public MainDashboardViewModel(
         IProjectService projectService,
@@ -53,7 +59,8 @@ public sealed class MainDashboardViewModel : ViewModelBase
         IStatisticsService statisticsService,
         IExternalResourceService externalResourceService,
         IFocusModeService focusModeService,
-        IProjectProgressService projectProgressService)
+        IProjectProgressService projectProgressService,
+        IGitService gitService)
     {
         _projectService = projectService;
         _taskService = taskService;
@@ -61,6 +68,7 @@ public sealed class MainDashboardViewModel : ViewModelBase
         _externalResourceService = externalResourceService;
         _focusModeService = focusModeService;
         _projectProgressService = projectProgressService;
+        _gitService = gitService;
 
         RefreshCommand = new AsyncCommand(_ => LoadAsync());
         CreateFirstTaskCommand = new AsyncCommand(_ => CreateTaskAsync());
@@ -77,6 +85,11 @@ public sealed class MainDashboardViewModel : ViewModelBase
         EditTaskCommand = new RelayCommand(_ => RequestOpenTaskManager?.Invoke(this, EventArgs.Empty));
         CompleteTaskCommand = new AsyncCommand(p => CompleteTaskAsync(p as DashboardTaskRow));
         DeleteTaskCommand = new AsyncCommand(p => DeleteTaskAsync(p as DashboardTaskRow));
+        GitInitCommand = new AsyncCommand(_ => GitInitAsync());
+        GitStatusCommand = new AsyncCommand(_ => GitStatusAsync());
+        GitStageAllCommand = new AsyncCommand(_ => GitStageAllAsync());
+        GitCommitCommand = new AsyncCommand(_ => GitCommitAsync());
+        OpenProjectFolderCommand = new RelayCommand(_ => OpenProjectFolder());
     }
 
     public event EventHandler? RequestOpenSidePanel;
@@ -248,6 +261,11 @@ public sealed class MainDashboardViewModel : ViewModelBase
     public ICommand EditTaskCommand { get; }
     public ICommand CompleteTaskCommand { get; }
     public ICommand DeleteTaskCommand { get; }
+    public ICommand GitInitCommand { get; }
+    public ICommand GitStatusCommand { get; }
+    public ICommand GitStageAllCommand { get; }
+    public ICommand GitCommitCommand { get; }
+    public ICommand OpenProjectFolderCommand { get; }
 
     public double WorkItemProgressPercent
     {
@@ -283,6 +301,12 @@ public sealed class MainDashboardViewModel : ViewModelBase
     {
         get => _currentWorkContext;
         private set => SetProperty(ref _currentWorkContext, value);
+    }
+
+    public string GitStatusText
+    {
+        get => _gitStatusText;
+        private set => SetProperty(ref _gitStatusText, value);
     }
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
@@ -408,6 +432,97 @@ public sealed class MainDashboardViewModel : ViewModelBase
         await LoadAsync().ConfigureAwait(true);
     }
 
+    private async Task GitInitAsync()
+    {
+        await RunGitAndShowSummaryAsync(["init"], "Git repository initialized.").ConfigureAwait(true);
+    }
+
+    private async Task GitStatusAsync()
+    {
+        await RunGitAndShowSummaryAsync(["status", "--short"], "Git status refreshed.").ConfigureAwait(true);
+    }
+
+    private async Task GitStageAllAsync()
+    {
+        await RunGitAndShowSummaryAsync(["add", "."], "All project changes staged.").ConfigureAwait(true);
+        await RunGitAndShowSummaryAsync(["status", "--short"], "Git status refreshed.").ConfigureAwait(true);
+    }
+
+    private async Task GitCommitAsync()
+    {
+        var message = Interaction.InputBox("Commit message:", "ReachIT Git Commit", "Project checkpoint");
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        await RunGitAndShowSummaryAsync(["commit", "-m", message.Trim()], "Commit created.").ConfigureAwait(true);
+    }
+
+    private void OpenProjectFolder()
+    {
+        var path = GetProjectDirectoryOrShowMessage();
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            GitStatusText = ex.Message;
+            MessageBox.Show(ex.Message, "ReachIT Git", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private async Task RunGitAndShowSummaryAsync(IReadOnlyList<string> arguments, string successMessage)
+    {
+        var path = GetProjectDirectoryOrShowMessage();
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await _gitService.RunAsync(path, arguments).ConfigureAwait(true);
+            if (result.ExitCode != 0)
+            {
+                throw new InvalidOperationException(string.IsNullOrWhiteSpace(result.Error)
+                    ? result.Output
+                    : result.Error);
+            }
+
+            GitStatusText = string.IsNullOrWhiteSpace(result.CombinedOutput)
+                ? successMessage
+                : result.CombinedOutput.Trim();
+        }
+        catch (Exception ex)
+        {
+            GitStatusText = ex.Message;
+            MessageBox.Show(ex.Message, "ReachIT Git", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private string? GetProjectDirectoryOrShowMessage()
+    {
+        var path = _projectService.CurrentProject?.ProjectDirectoryPath;
+        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+        {
+            GitStatusText = "Open a project first.";
+            return null;
+        }
+
+        return path;
+    }
+
     private async Task CreateFolderAsync()
     {
         await _projectService.CreateFolderAsync(null).ConfigureAwait(true);
@@ -499,6 +614,7 @@ public sealed class MainDashboardViewModel : ViewModelBase
         CurrentWorkContext = string.Empty;
         StatusText = "Open a .rit project to initialize dashboard data.";
         EmptyTaskMessage = "No tasks yet. Create your first task to start planning.";
+        GitStatusText = "Open a project to use Git controls.";
 
         TaskRows.Clear();
         NearestDeadlines.Clear();

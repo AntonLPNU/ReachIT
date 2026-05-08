@@ -5,8 +5,10 @@
         xmlns:views="clr-namespace:ReachIT.Presentation.Views"
         Title="ReachIT Start"
         Icon="Resources/AppIcon.ico"
-        Height="520"
-        Width="780"
+        Height="680"
+        Width="1040"
+        MinHeight="620"
+        MinWidth="920"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="CanResize">

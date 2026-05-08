@@ -14,11 +14,17 @@ public sealed class StartViewModel : ViewModelBase
 {
     private readonly IProjectService _projectService;
     private readonly IRecentFilesService _recentFilesService;
+    private readonly IAccountService _accountService;
+    private string _accountStatusText = $"{ResourceText("Account.StatusPrefix", "Account")}: {ResourceText("Account.LocalUser", "Local User")}";
 
-    public StartViewModel(IProjectService projectService, IRecentFilesService recentFilesService)
+    public StartViewModel(
+        IProjectService projectService,
+        IRecentFilesService recentFilesService,
+        IAccountService accountService)
     {
         _projectService = projectService;
         _recentFilesService = recentFilesService;
+        _accountService = accountService;
 
         OpenProjectCommand = new AsyncCommand(_ => OpenProjectAsync());
         CreateProjectCommand = new RelayCommand(_ => RequestCreateProject?.Invoke(this, EventArgs.Empty));
@@ -29,6 +35,7 @@ public sealed class StartViewModel : ViewModelBase
         {
             // TODO: Open preview/attach flow for selected recent external file.
         });
+        OpenAccountCommand = new RelayCommand(_ => RequestOpenAccount?.Invoke(this, EventArgs.Empty));
         OpenSettingsCommand = new RelayCommand(_ => RequestOpenSettings?.Invoke(this, EventArgs.Empty));
         ExitCommand = new RelayCommand(_ => RequestClose?.Invoke(this, false));
     }
@@ -38,17 +45,25 @@ public sealed class StartViewModel : ViewModelBase
 
     public string? OpenedProjectFolderPath { get; private set; }
 
+    public string AccountStatusText
+    {
+        get => _accountStatusText;
+        private set => SetProperty(ref _accountStatusText, value);
+    }
+
     public ICommand OpenProjectCommand { get; }
     public ICommand CreateProjectCommand { get; }
     public ICommand OpenRecentProjectCommand { get; }
     public ICommand RemoveRecentProjectCommand { get; }
     public ICommand OpenRecentProjectFolderCommand { get; }
     public ICommand OpenRecentExternalFileCommand { get; }
+    public ICommand OpenAccountCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand ExitCommand { get; }
 
     public event EventHandler<bool>? RequestClose;
     public event EventHandler? RequestCreateProject;
+    public event EventHandler? RequestOpenAccount;
     public event EventHandler? RequestOpenSettings;
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
@@ -66,6 +81,9 @@ public sealed class StartViewModel : ViewModelBase
         {
             RecentExternalFiles.Add(item);
         }
+
+        var account = await _accountService.GetAccountStateAsync(cancellationToken).ConfigureAwait(true);
+        AccountStatusText = $"{ResourceText("Account.StatusPrefix", "Account")}: {account.User.DisplayName} ({account.Subscription.PlanType})";
     }
 
     public void CompleteOpen(string projectFolderPath)
@@ -157,5 +175,10 @@ public sealed class StartViewModel : ViewModelBase
             Arguments = $"\"{project.ProjectDirectoryPath}\"",
             UseShellExecute = true
         });
+    }
+
+    private static string ResourceText(string key, string fallback)
+    {
+        return System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
     }
 }

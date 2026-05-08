@@ -11,16 +11,24 @@
 
         <Border Grid.Row="0" Style="{StaticResource ReachItHeroCardStyle}" Padding="18" Margin="0,0,0,16">
             <StackPanel>
-                <TextBlock Text="Create Project" Foreground="White" FontSize="28" FontWeight="Bold" />
-                <TextBlock Text="Name it, choose a home folder, pick a template, and collect the starting files."
+                <TextBlock Text="{DynamicResource Create.Title}" Foreground="White" FontSize="28" FontWeight="Bold" />
+                <TextBlock Text="{DynamicResource Create.Subtitle}"
                            Foreground="#EAF7FF"
                            Margin="0,6,0,0" />
             </StackPanel>
         </Border>
 
         <Border Grid.Row="1" Style="{StaticResource ReachItCardStyle}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -33,31 +41,77 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Text="Project Name" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="0" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
+                <TextBlock Text="{DynamicResource Create.ProjectName}" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="0" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
                 <TextBox Text="{Binding ProjectName, UpdateSourceTrigger=PropertyChanged}" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12" />
 
-                <TextBlock Text="Description" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="1" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
+                <TextBlock Text="{DynamicResource Create.Description}" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="1" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
                 <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12" />
 
-                <TextBlock Text="Save Location" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="2" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
+                <TextBlock Text="{DynamicResource Create.SaveLocation}" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="2" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
                 <TextBox Text="{Binding SaveLocation, UpdateSourceTrigger=PropertyChanged}" Grid.Row="2" Grid.Column="1" Margin="0,0,8,12" />
-                <Button Content="Browse" Command="{Binding BrowseLocationCommand}" Grid.Row="2" Grid.Column="2" Style="{StaticResource ReachItSecondaryButtonStyle}" Margin="0,0,0,12" />
+                <Button Content="{DynamicResource Create.Browse}" Command="{Binding BrowseLocationCommand}" Grid.Row="2" Grid.Column="2" Style="{StaticResource ReachItSecondaryButtonStyle}" Margin="0,0,0,12" />
 
-                <TextBlock Text="Template" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="3" Grid.Column="0" Margin="0,0,12,14" VerticalAlignment="Center" />
+                <TextBlock Text="{DynamicResource Create.Template}" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="3" Grid.Column="0" Margin="0,0,12,14" VerticalAlignment="Center" />
                 <ComboBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}" Margin="0,0,0,14" />
 
-                <GroupBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Header="Initial External Files">
+                <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
+                        Background="#101B2D"
+                        BorderBrush="{StaticResource ReachItBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12"
+                        Margin="0,0,0,14">
+                    <TextBlock Text="{Binding TemplateHelpText}" Foreground="{StaticResource ReachItMutedBrush}" TextWrapping="Wrap" />
+                </Border>
+
+                <TextBlock Text="{DynamicResource Create.FinalGoal}" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="5" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
+                <TextBox Text="{Binding FinalGoal, UpdateSourceTrigger=PropertyChanged}" Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12" />
+
+                <TextBlock Text="{Binding MainTopicLabel}" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="6" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
+                <TextBox Text="{Binding MainTopic, UpdateSourceTrigger=PropertyChanged}" Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12" />
+
+                <TextBlock Text="{DynamicResource Create.DesiredResult}" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="7" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
+                <TextBox Text="{Binding DesiredResult, UpdateSourceTrigger=PropertyChanged}" Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12" />
+
+                <TextBlock Text="{Binding ResultFormatLabel}" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="8" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" />
+                <TextBox Text="{Binding ResultFormat, UpdateSourceTrigger=PropertyChanged}" Grid.Row="8" Grid.Column="1" Margin="0,0,8,12" />
+                <DatePicker SelectedDate="{Binding DeadlineDate}" Grid.Row="8" Grid.Column="2" Margin="0,0,0,12" ToolTip="Optional deadline" />
+
+                <TextBlock Text="{Binding KnownSectionsLabel}" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="9" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Top" />
+                <TextBox Text="{Binding KnownSections, UpdateSourceTrigger=PropertyChanged}"
+                         Grid.Row="9"
+                         Grid.Column="1"
+                         Grid.ColumnSpan="2"
+                         MinHeight="74"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         Margin="0,0,0,12"
+                         ToolTip="Write one item per line, or separate items with semicolons." />
+
+                <TextBlock Text="{DynamicResource Create.TemplateDepth}" Style="{StaticResource ReachItLabelTextStyle}" Grid.Row="10" Grid.Column="0" Margin="0,0,12,14" VerticalAlignment="Center" />
+                <StackPanel Grid.Row="10" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,14">
+                    <ComboBox ItemsSource="{Binding DetailLevels}" SelectedItem="{Binding DetailLevel}" Width="180" Margin="0,0,14,0" />
+                    <CheckBox Content="{DynamicResource Create.CreateStarterFiles}" IsChecked="{Binding CreateStarterFiles}" VerticalAlignment="Center" Margin="0,0,14,0" />
+                    <CheckBox Content="{DynamicResource Create.LinkTasksToFiles}" IsChecked="{Binding LinkTasksToFiles}" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <GroupBox Grid.Row="11" Grid.Column="0" Grid.ColumnSpan="3" Header="{DynamicResource Create.InitialExternalFiles}">
                     <DockPanel Margin="8">
-                        <Button Content="+ Add initial external files" Command="{Binding AddInitialExternalFileCommand}" DockPanel.Dock="Top" Margin="0,0,0,10" />
-                        <ListBox ItemsSource="{Binding InitialExternalFiles}" MinHeight="120" />
+                        <Button Content="{DynamicResource Create.AddInitialExternalFiles}" Command="{Binding AddInitialExternalFileCommand}" DockPanel.Dock="Top" Margin="0,0,0,10" />
+                        <ListBox ItemsSource="{Binding InitialExternalFiles}" MinHeight="90" />
                     </DockPanel>
                 </GroupBox>
             </Grid>
+            </ScrollViewer>
         </Border>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button Content="Create Project" Command="{Binding CreateCommand}" Width="170" />
-            <Button Content="Cancel" Command="{Binding CancelCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" Width="110" />
+            <Button Content="{DynamicResource Create.AutofillTestProject}"
+                    Command="{Binding AutofillCommand}"
+                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                    Width="180" />
+            <Button Content="{DynamicResource Create.CreateProject}" Command="{Binding CreateCommand}" Width="170" />
+            <Button Content="{DynamicResource Create.Cancel}" Command="{Binding CancelCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" Width="110" />
         </StackPanel>
     </Grid>
 </UserControl>

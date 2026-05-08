@@ -77,6 +77,45 @@ public sealed class TaskSuggestionService : ITaskSuggestionService
             });
         }
 
+        var activeWorkItems = await db.WorkItems
+            .Where(x => x.ProjectId == project.Id && x.Status != WorkItemStatus.Done && x.Status != WorkItemStatus.Cancelled)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var existingCompletionSuggestionTitles = await db.TaskSuggestions
+            .Where(x => x.ProjectId == project.Id && x.Status == TaskSuggestionStatus.New && x.Reason.Contains("may be completed"))
+            .Select(x => x.SuggestedTitle)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var activityByWorkItem = units
+            .Where(x => x.WorkItemId.HasValue)
+            .GroupBy(x => x.WorkItemId!.Value)
+            .Where(x => x.Count() >= 3)
+            .ToDictionary(x => x.Key, x => x.Count());
+
+        foreach (var item in activeWorkItems.Where(x => activityByWorkItem.ContainsKey(x.Id)).Take(10))
+        {
+            var title = $"Review completion: {item.Title}";
+            if (existingCompletionSuggestionTitles.Contains(title, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            db.TaskSuggestions.Add(new TaskSuggestion
+            {
+                ProjectId = project.Id,
+                SuggestedTitle = title,
+                SuggestedDescription = $"ReachIT detected sustained activity on '{item.Title}'. Ask before marking it done.",
+                SuggestedType = item.Type,
+                SuggestedLinkedPath = item.LinkedPath,
+                Confidence = Math.Clamp(activityByWorkItem[item.Id] / 6d, 0.45, 0.9),
+                Reason = $"Work item may be completed after {activityByWorkItem[item.Id]} recent activity events.",
+                CreatedAt = DateTime.UtcNow,
+                Status = TaskSuggestionStatus.New
+            });
+        }
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 

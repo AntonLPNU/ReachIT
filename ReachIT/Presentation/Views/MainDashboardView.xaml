@@ -138,6 +138,75 @@
             <Border Style="{StaticResource ReachItCardStyle}" Margin="0,14,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="280" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <iconPacks:PackIconMaterial Kind="Git" Width="24" Height="24" Margin="0,1,10,0" Foreground="{StaticResource SkyAquaBrush}" />
+                            <TextBlock Text="{DynamicResource Tasks.VersionControl}" Style="{StaticResource ReachItSectionTitleTextStyle}" Margin="0" />
+                        </StackPanel>
+                        <TextBlock Text="{DynamicResource Tasks.VersionControlSubtitle}" Style="{StaticResource ReachItMutedTextStyle}" Margin="0,0,0,14" />
+
+                        <Button Command="{Binding GitInitCommand}" ToolTip="{DynamicResource Tasks.GitInitTip}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <iconPacks:PackIconMaterial Kind="SourceBranch" Width="16" Height="16" Margin="0,0,8,0" />
+                                <TextBlock Text="{DynamicResource Tasks.GitInit}" />
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding OpenProjectFolderCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="{DynamicResource Tasks.OpenFolderTip}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <iconPacks:PackIconMaterial Kind="FolderOpen" Width="16" Height="16" Margin="0,0,8,0" />
+                                <TextBlock Text="{DynamicResource Tasks.OpenProjectFolder}" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <Grid Grid.Column="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <WrapPanel>
+                            <Button Command="{Binding GitStatusCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="{DynamicResource Tasks.GitStatusTip}">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial Kind="Refresh" Width="16" Height="16" Margin="0,0,8,0" />
+                                    <TextBlock Text="{DynamicResource Tasks.GitStatus}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding GitStageAllCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="{DynamicResource Tasks.GitStageTip}">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial Kind="PlusBoxMultiple" Width="16" Height="16" Margin="0,0,8,0" />
+                                    <TextBlock Text="{DynamicResource Tasks.GitStageAll}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding GitCommitCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="{DynamicResource Tasks.GitCommitTip}">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial Kind="CheckBold" Width="16" Height="16" Margin="0,0,8,0" />
+                                    <TextBlock Text="{DynamicResource Tasks.GitCommit}" />
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+
+                        <Border Grid.Row="1"
+                                Background="{StaticResource ReachItInputBrush}"
+                                BorderBrush="{StaticResource ReachItBorderBrush}"
+                                CornerRadius="8"
+                                Padding="10"
+                                Margin="0,6,0,0"
+                                MinHeight="112">
+                            <TextBlock Text="{Binding GitStatusText}" Style="{StaticResource ReachItMutedTextStyle}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" />
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Border Style="{StaticResource ReachItCardStyle}" Margin="0,14,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="14" />
                         <ColumnDefinition Width="*" />

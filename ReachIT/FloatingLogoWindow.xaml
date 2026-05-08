@@ -12,23 +12,64 @@
         Topmost="True"
         ShowInTaskbar="False"
         SizeToContent="Manual">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </Window.Resources>
     <Border Width="64"
             Height="64"
             CornerRadius="32"
             Background="#111827"
-            BorderBrush="#334155"
-            BorderThickness="1"
             Cursor="Hand"
             MouseLeftButtonDown="Logo_MouseLeftButtonDown"
             MouseLeftButtonUp="Logo_MouseLeftButtonUp"
             MouseMove="Logo_MouseMove"
+            MouseEnter="Logo_MouseEnter"
             MouseRightButtonUp="Logo_MouseRightButtonUp">
+        <Border.Style>
+            <Style TargetType="Border">
+                <Setter Property="BorderBrush" Value="#334155" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsFocusActive}" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource SkyAquaBrush}" />
+                        <Setter Property="BorderThickness" Value="3" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
         <Border.Effect>
             <DropShadowEffect BlurRadius="22" ShadowDepth="0" Opacity="0.45" Color="#020617" />
         </Border.Effect>
         <Grid>
             <Ellipse Stroke="{StaticResource ReachItTitleBrush}" StrokeThickness="3" Margin="5" />
             <Image Source="Resources/AppIcon.png" Width="44" Height="44" Stretch="Uniform" />
+            <Border Width="52"
+                    Height="18"
+                    CornerRadius="9"
+                    Background="#D9111827"
+                    BorderBrush="{StaticResource SkyAquaBrush}"
+                    BorderThickness="1"
+                    VerticalAlignment="Bottom"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,-6"
+                    Visibility="{Binding IsFocusActive, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock Text="{Binding FocusDurationText}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="10"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource SkyAquaBrush}"
+                           TextWrapping="NoWrap" />
+            </Border>
+            <Ellipse Width="13"
+                     Height="13"
+                     Fill="{StaticResource NeonPinkBrush}"
+                     Stroke="White"
+                     StrokeThickness="1"
+                     HorizontalAlignment="Right"
+                     VerticalAlignment="Top"
+                     Margin="0,4,5,0"
+                     Visibility="{Binding IsFocusActive, Converter={StaticResource BoolToVisibilityConverter}}" />
         </Grid>
     </Border>
 </Window>

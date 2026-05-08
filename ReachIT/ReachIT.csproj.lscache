@@ -54,19 +54,31 @@ TemporaryDependencyNodeTargetIdentifier=net8.0-windows
 /warnaserror+:NU1605,SYSLIB0011
 
 [sourceFiles]
+AccountLoginWindow.xaml.cs
 App.xaml.cs
 Application/Contracts/
+ IAccountService.cs
+ IActivityDashboardService.cs
+ IActivityMonitorService.cs
+ IActivityRepository.cs
  IAppSettingsService.cs
  IDatabaseService.cs
+ IDeveloperProjectGeneratorService.cs
  IDialogService.cs
+ IEntitlementService.cs
  IExternalResourceService.cs
+ IFileActivityWatcherService.cs
+ IFileInspectionService.cs
  IFileSystemProjectExplorerService.cs
  IFocusModeService.cs
+ IForegroundWindowService.cs
+ IGitActivityService.cs
  IGitService.cs
  IGlobalHotkeyService.cs
  INavigationService.cs
  IOverlayService.cs
  IProcessMonitorService.cs
+ IProductivityScoringService.cs
  IProgressCalculationService.cs
  IProjectProgressService.cs
  IProjectService.cs
@@ -77,16 +89,27 @@ Application/Contracts/
  ITaskSuggestionService.cs
  ITrayIconService.cs
  IWindowManagerService.cs
+ IWorkContextDetectorService.cs
  IWorkItemRepository.cs
  IWorkItemService.cs
  IWorkUnitRepository.cs
  IWorkUnitService.cs
 Application/Services/
+ AccountService.cs
+ ActivityDashboardService.cs
+ ActivityMonitorService.cs
  AppSettingsService.cs
+ DeveloperProjectGeneratorService.cs
+ EntitlementService.cs
  ExternalResourceService.cs
+ FileActivityWatcherService.cs
+ FileInspectionService.cs
  FileSystemProjectExplorerService.cs
  FocusModeService.cs
+ ForegroundWindowService.cs
+ GitActivityService.cs
  GitService.cs
+ ProductivityScoringService.cs
  ProgressCalculationService.cs
  ProjectProgressService.cs
  ProjectService.cs
@@ -95,28 +118,43 @@ Application/Services/
  TaskLinkingService.cs
  TaskService.cs
  TaskSuggestionService.cs
+ WorkContextDetectorService.cs
  WorkItemService.cs
  WorkUnitService.cs
 AssemblyInfo.cs
 Bootstrap/AppHost.cs
 CreateProjectWindow.xaml.cs
+DeveloperTestPanelWindow.xaml.cs
 Domain/Enums/
+ AccountFeature.cs
+ ActivityEventType.cs
  ExternalResourceAttachMode.cs
  ExternalResourceType.cs
  FocusModeType.cs
  ProjectItemType.cs
  ProjectTemplateType.cs
  ProjectTreeNodeType.cs
+ SubscriptionPlanType.cs
+ SubscriptionStatus.cs
  TaskSuggestionStatus.cs
  WorkItemStatus.cs
  WorkItemType.cs
  WorkUnitType.cs
 Domain/Models/
+ AccountState.cs
+ AccountSubscription.cs
+ ActivityDashboardSnapshot.cs
+ ActivityEvent.cs
  AppSettings.cs
  CreateProjectRequest.cs
+ CurrentWorkContext.cs
  ExternalResourceItem.cs
+ FeatureAccess.cs
+ FileInspectionResult.cs
  FocusSession.cs
+ ForegroundWindowSnapshot.cs
  Milestone.cs
+ ProductivityScoreSnapshot.cs
  ProductivityStat.cs
  ProjectDashboardData.cs
  ProjectItem.cs
@@ -134,23 +172,31 @@ Domain/Models/
  WorkItem.cs
  WorkUnit.cs
 FloatingLogoWindow.xaml.cs
+FocusWarningWindow.xaml.cs
 Infrastructure/
  Logging/LocalLogger.cs
  OS/ProcessMonitorService.cs
  Persistence/
+  ActivityRepository.cs
   DatabaseService.cs
   ReachItDbContext.cs
   WorkItemRepository.cs
   WorkUnitRepository.cs
+LoadingWindow.xaml.cs
 MainWindow.xaml.cs
 obj/Debug/net8.0-windows/
  .NETCoreApp,Version=v8.0.AssemblyAttributes.cs
+ AccountLoginWindow.g.cs
  App.g.cs
  CreateProjectWindow.g.cs
+ DeveloperTestPanelWindow.g.cs
  FloatingLogoWindow.g.cs
+ FocusWarningWindow.g.cs
  GeneratedInternalTypeHelper.g.cs
+ LoadingWindow.g.cs
  MainWindow.g.cs
  Presentation/Views/
+  ActivityDashboardView.g.cs
   CreateProjectView.g.cs
   FileView.g.cs
   FocusModeView.g.cs
@@ -181,6 +227,7 @@ Presentation/Services/
  TrayIconService.cs
  WindowManagerService.cs
 Presentation/ViewModels/
+ ActivityDashboardViewModel.cs
  CreateProjectViewModel.cs
  FileViewModel.cs
  FloatingLogoViewModel.cs
@@ -203,6 +250,7 @@ Presentation/ViewModels/
  VersionsViewModel.cs
  ViewModelBase.cs
 Presentation/Views/
+ ActivityDashboardView.xaml.cs
  CreateProjectView.xaml.cs
  FileView.xaml.cs
  FocusModeView.xaml.cs

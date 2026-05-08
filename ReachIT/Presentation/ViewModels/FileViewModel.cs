@@ -13,10 +13,9 @@ namespace ReachIT.Presentation.ViewModels;
 
 public sealed class FileViewModel : ViewModelBase
 {
-    private const int MaxTextPreviewBytes = 200 * 1024;
-
     private readonly IProjectService _projectService;
     private readonly ITaskService _taskService;
+    private readonly IFileInspectionService _fileInspectionService;
     private string _selectedNodeName = "Files";
     private string _selectedRelativePath = string.Empty;
     private string _selectedFullPath = string.Empty;
@@ -27,6 +26,8 @@ public sealed class FileViewModel : ViewModelBase
     private string _fileSizeText = "-";
     private string _createdAtText = "-";
     private string _lastModifiedText = "-";
+    private string _fileKind = "-";
+    private string _readCapability = "-";
     private bool _exists;
     private string _textPreview = string.Empty;
     private string _imagePath = string.Empty;
@@ -37,10 +38,14 @@ public sealed class FileViewModel : ViewModelBase
     private bool _hasAttachedTasks;
     private TaskItem? _selectedAttachedTask;
 
-    public FileViewModel(IProjectService projectService, ITaskService taskService)
+    public FileViewModel(
+        IProjectService projectService,
+        ITaskService taskService,
+        IFileInspectionService fileInspectionService)
     {
         _projectService = projectService;
         _taskService = taskService;
+        _fileInspectionService = fileInspectionService;
 
         OpenFileCommand = new RelayCommand(_ => OpenFile());
         RevealInExplorerCommand = new RelayCommand(_ => RevealInExplorer());
@@ -122,6 +127,18 @@ public sealed class FileViewModel : ViewModelBase
     {
         get => _lastModifiedText;
         set => SetProperty(ref _lastModifiedText, value);
+    }
+
+    public string FileKind
+    {
+        get => _fileKind;
+        set => SetProperty(ref _fileKind, value);
+    }
+
+    public string ReadCapability
+    {
+        get => _readCapability;
+        set => SetProperty(ref _readCapability, value);
     }
 
     public bool Exists
@@ -236,21 +253,14 @@ public sealed class FileViewModel : ViewModelBase
         CreatedAtText = fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss");
         LastModifiedText = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss");
 
-        if (IsTextPreviewExtension(fileInfo.Extension))
-        {
-            CanPreviewAsText = true;
-            TextPreview = await ReadTextPreviewAsync(fullPath).ConfigureAwait(true);
-            return;
-        }
-
-        if (IsImagePreviewExtension(fileInfo.Extension))
-        {
-            CanPreviewAsImage = true;
-            ImagePath = fullPath;
-            return;
-        }
-
-        ErrorMessage = "Preview is not available for this file type.";
+        var inspection = await _fileInspectionService.InspectAsync(fullPath).ConfigureAwait(true);
+        FileKind = inspection.FileKind;
+        ReadCapability = inspection.ReadCapability;
+        TextPreview = inspection.PreviewText;
+        CanPreviewAsText = inspection.HasTextPreview;
+        CanPreviewAsImage = inspection.HasImagePreview;
+        ImagePath = inspection.HasImagePreview ? fullPath : string.Empty;
+        ErrorMessage = inspection.Message;
     }
 
     private void OpenFile()
@@ -289,6 +299,8 @@ public sealed class FileViewModel : ViewModelBase
         FileSizeText = "-";
         CreatedAtText = "-";
         LastModifiedText = "-";
+        FileKind = "-";
+        ReadCapability = "-";
         TextPreview = string.Empty;
         ImagePath = string.Empty;
         CanPreviewAsText = false;
@@ -358,39 +370,6 @@ public sealed class FileViewModel : ViewModelBase
         AttachedTasksSummary = AttachedTasks.Count == 0
             ? "No attached tasks"
             : string.Join(", ", AttachedTasks.Select(x => x.Title));
-    }
-
-    private static async Task<string> ReadTextPreviewAsync(string fullPath)
-    {
-        await using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        var bytesToRead = (int)Math.Min(stream.Length, MaxTextPreviewBytes);
-        var buffer = new byte[bytesToRead];
-        var read = await stream.ReadAsync(buffer.AsMemory(0, bytesToRead)).ConfigureAwait(false);
-        var preview = System.Text.Encoding.UTF8.GetString(buffer, 0, read);
-
-        if (stream.Length > MaxTextPreviewBytes)
-        {
-            preview += Environment.NewLine + Environment.NewLine + "--- Preview truncated at 200 KB ---";
-        }
-
-        return preview;
-    }
-
-    private static bool IsTextPreviewExtension(string extension)
-    {
-        return extension.Equals(".txt", StringComparison.OrdinalIgnoreCase)
-               || extension.Equals(".md", StringComparison.OrdinalIgnoreCase)
-               || extension.Equals(".json", StringComparison.OrdinalIgnoreCase)
-               || extension.Equals(".rit", StringComparison.OrdinalIgnoreCase)
-               || extension.Equals(".cs", StringComparison.OrdinalIgnoreCase)
-               || extension.Equals(".xaml", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsImagePreviewExtension(string extension)
-    {
-        return extension.Equals(".png", StringComparison.OrdinalIgnoreCase)
-               || extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
-               || extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FormatSize(long bytes)

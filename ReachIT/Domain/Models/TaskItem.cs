@@ -10,8 +10,10 @@ public class TaskItem
     public string Description { get; set; } = string.Empty;
     public bool IsCompleted { get; set; }
     public string Status { get; set; } = "To Do";
-    public int Priority { get; set; } = 1; // 1: Low, 2: Normal, 3: High
+    public int Priority { get; set; } = 1; // Queue order: lower numbers are handled first.
     public DateTime? DueDateUtc { get; set; }
+    public DateTime? StartedAtUtc { get; set; }
+    public DateTime? CompletedAtUtc { get; set; }
     public Guid? ParentTaskId { get; set; }
     public TaskItem? ParentTask { get; set; }
     public List<TaskItem> Subtasks { get; set; } = new();
@@ -29,6 +31,27 @@ public class TaskItem
 
     [NotMapped]
     public int ProgressPercent => IsCompleted ? 100 : 0;
+
+    [NotMapped]
+    public string QueuePositionText => $"#{Priority}";
+
+    [NotMapped]
+    public string CompletionAuditText
+    {
+        get
+        {
+            if (!IsCompleted)
+            {
+                return StartedAtUtc.HasValue
+                    ? $"Started {StartedAtUtc.Value.ToLocalTime():yyyy-MM-dd HH:mm}"
+                    : "Waiting in queue";
+            }
+
+            return CompletedAtUtc.HasValue
+                ? $"Closed {CompletedAtUtc.Value.ToLocalTime():yyyy-MM-dd HH:mm}"
+                : "Closed";
+        }
+    }
 
     [NotMapped]
     public string DeadlineStatus

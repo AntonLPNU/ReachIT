@@ -1,0 +1,91 @@
+<Window x:Class="ReachIT.FocusWarningWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        Title="Focus warning"
+        Icon="Resources/AppIcon.ico"
+        Width="520"
+        SizeToContent="Height"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        Topmost="True"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterScreen">
+    <Border Padding="18"
+            CornerRadius="14"
+            Background="#F2111827"
+            BorderBrush="{StaticResource NeonPinkBrush}"
+            BorderThickness="2">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="34" ShadowDepth="0" Opacity="0.8" Color="#05070D" />
+        </Border.Effect>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Width="46"
+                        Height="46"
+                        CornerRadius="23"
+                        Background="#2A1230"
+                        BorderBrush="{StaticResource NeonPinkBrush}"
+                        BorderThickness="1"
+                        Margin="0,0,12,0">
+                    <iconPacks:PackIconMaterial Kind="ShieldAlert" Width="26" Height="26" Foreground="{StaticResource NeonPinkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="Focus mode is active"
+                               Style="{StaticResource ReachItSectionTitleTextStyle}"
+                               Foreground="{StaticResource NeonPinkBrush}"
+                               Margin="0,0,0,2" />
+                    <TextBlock Text="This app is not on your whitelist."
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+
+            <TextBlock x:Name="MessageText"
+                       Grid.Row="1"
+                       TextWrapping="Wrap"
+                       Style="{StaticResource ReachItMutedTextStyle}"
+                       Margin="0,16,0,16" />
+
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="1" Click="BackButton_Click" ToolTip="Hide this warning and return to your work.">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="KeyboardReturn" Width="16" Height="16" Margin="0,0,8,0" />
+                        <TextBlock Text="Back to work" />
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="2" Click="WhitelistButton_Click" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Add this app to the focus whitelist after confirmation.">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="FormatListChecks" Width="16" Height="16" Margin="0,0,8,0" />
+                        <TextBlock Text="Allow this app" />
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="3" Click="StopFocusButton_Click" Style="{StaticResource ReachItDangerButtonStyle}" ToolTip="Stop Focus Mode.">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Stop" Width="16" Height="16" Margin="0,0,8,0" />
+                        <TextBlock Text="Stop focus" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

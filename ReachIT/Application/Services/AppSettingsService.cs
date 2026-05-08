@@ -61,6 +61,16 @@ public sealed class AppSettingsService : IAppSettingsService
             existing.LastOpenedProjectPath = settings.LastOpenedProjectPath;
             existing.BackupLocationPath = settings.BackupLocationPath;
             existing.AllowedApplicationsSerialized = settings.AllowedApplicationsSerialized;
+            existing.FocusDistractingApplicationsSerialized = settings.FocusDistractingApplicationsSerialized;
+            existing.EnableActivityTracking = settings.EnableActivityTracking;
+            existing.TrackActiveWindow = settings.TrackActiveWindow;
+            existing.TrackFileChanges = settings.TrackFileChanges;
+            existing.TrackGitChanges = settings.TrackGitChanges;
+            existing.TrackTextStatistics = settings.TrackTextStatistics;
+            existing.IgnorePrivateApps = settings.IgnorePrivateApps;
+            existing.PauseActivityTracking = settings.PauseActivityTracking;
+            existing.PrivateAppsSerialized = settings.PrivateAppsSerialized;
+            existing.IgnoredFoldersSerialized = settings.IgnoredFoldersSerialized;
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

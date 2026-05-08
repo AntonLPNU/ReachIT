@@ -29,14 +29,20 @@
         <Menu Grid.Row="0">
             <MenuItem Header="{DynamicResource Menu.File}">
                 <MenuItem Header="{DynamicResource Menu.OpenProjectFolder}" Command="{Binding OpenProjectCommand}" />
+                <MenuItem Header="{DynamicResource Menu.CloseProject}" Command="{Binding CloseProjectCommand}" />
                 <Separator />
+                <MenuItem Header="{DynamicResource Menu.AccountLogin}" Command="{Binding OpenAccountCommand}" />
                 <MenuItem Header="{DynamicResource Menu.Settings}" Command="{Binding OpenSettingsCommand}" />
                 <MenuItem Header="{DynamicResource Menu.ExitApp}" Command="{Binding ExitApplicationCommand}" />
             </MenuItem>
             <MenuItem Header="{DynamicResource Menu.View}">
                 <MenuItem Header="{DynamicResource Menu.ControlCenter}" Command="{Binding OpenMainViewCommand}" />
+                <MenuItem Header="{DynamicResource Menu.Activity}" Command="{Binding OpenActivityCommand}" />
                 <MenuItem Header="{DynamicResource Menu.Statistics}" Command="{Binding OpenStatisticsCommand}" />
                 <MenuItem Header="{DynamicResource Menu.Settings}" Command="{Binding OpenSettingsCommand}" />
+            </MenuItem>
+            <MenuItem Header="{DynamicResource Menu.Developer}">
+                <MenuItem Header="{DynamicResource Menu.TestPanel}" Command="{Binding OpenDeveloperTestPanelCommand}" />
             </MenuItem>
             <MenuItem Header="{DynamicResource Menu.Focus}">
                 <MenuItem Header="{DynamicResource Menu.Start}" Command="{Binding StartFocusCommand}" />
@@ -49,6 +55,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Horizontal">
@@ -58,17 +65,39 @@
                     <Button Command="{Binding GoForwardCommand}" Style="{StaticResource ReachItIconButtonStyle}" ToolTip="{DynamicResource Main.ForwardTip}">
                         <iconPacks:PackIconMaterial Kind="ArrowRight" Width="20" Height="20" />
                     </Button>
+                    <Button Command="{Binding OpenAccountCommand}" Style="{StaticResource ReachItIconButtonStyle}" ToolTip="{DynamicResource Main.AccountLoginTip}">
+                        <iconPacks:PackIconMaterial Kind="AccountCircle" Width="20" Height="20" />
+                    </Button>
+                    <Button Command="{Binding CloseProjectCommand}" Style="{StaticResource ReachItIconButtonStyle}" ToolTip="{DynamicResource Main.CloseProjectTip}">
+                        <iconPacks:PackIconMaterial Kind="Home" Width="20" Height="20" />
+                    </Button>
+                    <Button Command="{Binding OpenDeveloperTestPanelCommand}" Style="{StaticResource ReachItIconButtonStyle}" ToolTip="{DynamicResource Main.DeveloperTestPanelTip}">
+                        <iconPacks:PackIconMaterial Kind="Flask" Width="20" Height="20" />
+                    </Button>
+                    <Border BorderBrush="{StaticResource ReachItBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="10,4"
+                            Margin="6,0,0,6"
+                            Background="#13243A"
+                            VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="AccountCheck" Width="15" Height="15" Foreground="{StaticResource SkyAquaBrush}" Margin="0,1,6,0" />
+                            <TextBlock Text="{Binding AccountStatusText}" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
-                <Border Grid.Column="1"
-                        BorderBrush="{StaticResource ReachItBorderBrush}"
+                <Border Grid.Column="2"
+                        BorderBrush="{StaticResource SkyAquaBrush}"
                         BorderThickness="1"
                         CornerRadius="10"
                         Padding="10,4"
                         Margin="8,0,0,0"
-                        Background="#151E31"
+                        Background="#13243A"
                         Visibility="{Binding FocusModeViewModel.IsActive, Converter={StaticResource BoolToVisibilityConverter}}">
                     <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="ShieldCheck" Width="15" Height="15" Foreground="{StaticResource SkyAquaBrush}" Margin="0,1,6,0" />
                         <TextBlock Text="{DynamicResource Main.FocusLabel}" FontWeight="SemiBold" Margin="0,0,4,0"/>
                         <TextBlock Text="{Binding FocusModeViewModel.SessionDurationText}" />
                     </StackPanel>

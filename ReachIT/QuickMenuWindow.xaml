@@ -10,6 +10,7 @@
         Background="Transparent"
         ResizeMode="NoResize"
         Topmost="True"
+        ShowActivated="False"
         ShowInTaskbar="False"
         Deactivated="Window_Deactivated">
     <Window.Resources>

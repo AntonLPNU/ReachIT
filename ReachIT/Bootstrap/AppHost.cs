@@ -17,6 +17,10 @@ public sealed class AppHost
         RegisterSingleton<ReachIT.Infrastructure.Logging.ILocalLogger>(new ReachIT.Infrastructure.Logging.LocalLogger());
         RegisterSingleton<IDatabaseService>(new DatabaseService());
         RegisterSingleton<IAppSettingsService>(new AppSettingsService(GetRequiredService<IDatabaseService>()));
+        RegisterSingleton<IAccountService>(new AccountService(
+            GetRequiredService<IDatabaseService>(),
+            new Lazy<IEntitlementService>(() => GetRequiredService<IEntitlementService>())));
+        RegisterSingleton<IEntitlementService>(new EntitlementService(GetRequiredService<IAccountService>()));
         RegisterSingleton<IProcessMonitorService>(new ProcessMonitorService());
         RegisterSingleton<IDialogService>(new DialogService());
         RegisterSingleton<IOverlayService>(new OverlayService());
@@ -26,18 +30,26 @@ public sealed class AppHost
         RegisterSingleton<IRecentFilesService>(new RecentFilesService(GetRequiredService<IDatabaseService>()));
         RegisterSingleton<IWorkItemRepository>(new WorkItemRepository(GetRequiredService<IDatabaseService>()));
         RegisterSingleton<IWorkUnitRepository>(new WorkUnitRepository(GetRequiredService<IDatabaseService>()));
+        RegisterSingleton<IActivityRepository>(new ActivityRepository(GetRequiredService<IDatabaseService>()));
         RegisterSingleton<IExternalResourceService>(new ExternalResourceService(
             GetRequiredService<IDatabaseService>(),
             GetRequiredService<IRecentFilesService>()));
         RegisterSingleton<IFileSystemProjectExplorerService>(new FileSystemProjectExplorerService(
             GetRequiredService<IExternalResourceService>()));
+        RegisterSingleton<IFileInspectionService>(new FileInspectionService());
+        RegisterSingleton<ITaskService>(new TaskService(GetRequiredService<IDatabaseService>()));
 
         RegisterSingleton<IProjectService>(new ProjectService(
             GetRequiredService<IDialogService>(),
             GetRequiredService<IRecentFilesService>(),
             GetRequiredService<IDatabaseService>(),
-            GetRequiredService<IFileSystemProjectExplorerService>()));
-        RegisterSingleton<ITaskService>(new TaskService(GetRequiredService<IDatabaseService>()));
+            GetRequiredService<IFileSystemProjectExplorerService>(),
+            GetRequiredService<IWorkItemRepository>(),
+            GetRequiredService<ITaskService>()));
+        RegisterSingleton<IDeveloperProjectGeneratorService>(new DeveloperProjectGeneratorService(
+            GetRequiredService<IProjectService>(),
+            GetRequiredService<IDialogService>(),
+            GetRequiredService<ITaskService>()));
         RegisterSingleton<IWorkItemService>(new WorkItemService(
             GetRequiredService<IWorkItemRepository>(),
             GetRequiredService<ITaskService>()));
@@ -55,8 +67,36 @@ public sealed class AppHost
             GetRequiredService<IProgressCalculationService>(),
             GetRequiredService<ITaskSuggestionService>()));
         RegisterSingleton<IStatisticsService>(new StatisticsService(GetRequiredService<IDatabaseService>()));
-        RegisterSingleton<IFocusModeService>(new FocusModeService(GetRequiredService<IProcessMonitorService>(), GetRequiredService<IDatabaseService>()));
         RegisterSingleton<IGitService>(new GitService());
+        RegisterSingleton<IForegroundWindowService>(new ForegroundWindowService());
+        RegisterSingleton<IFocusModeService>(new FocusModeService(
+            GetRequiredService<IDatabaseService>(),
+            GetRequiredService<IForegroundWindowService>(),
+            GetRequiredService<IAppSettingsService>()));
+        RegisterSingleton<IFileActivityWatcherService>(new FileActivityWatcherService());
+        RegisterSingleton<IGitActivityService>(new GitActivityService(GetRequiredService<IGitService>()));
+        RegisterSingleton<IWorkContextDetectorService>(new WorkContextDetectorService(
+            GetRequiredService<IActivityRepository>(),
+            GetRequiredService<IWorkItemRepository>(),
+            GetRequiredService<IForegroundWindowService>(),
+            GetRequiredService<IAppSettingsService>()));
+        RegisterSingleton<IProductivityScoringService>(new ProductivityScoringService(
+            GetRequiredService<IActivityRepository>(),
+            GetRequiredService<IWorkUnitRepository>()));
+        RegisterSingleton<IActivityDashboardService>(new ActivityDashboardService(
+            GetRequiredService<IActivityRepository>(),
+            GetRequiredService<IWorkContextDetectorService>(),
+            GetRequiredService<IProductivityScoringService>(),
+            GetRequiredService<ITaskSuggestionService>()));
+        RegisterSingleton<IActivityMonitorService>(new ActivityMonitorService(
+            GetRequiredService<IActivityRepository>(),
+            GetRequiredService<IForegroundWindowService>(),
+            GetRequiredService<IFileActivityWatcherService>(),
+            GetRequiredService<IGitActivityService>(),
+            GetRequiredService<IAppSettingsService>(),
+            GetRequiredService<IFocusModeService>(),
+            GetRequiredService<IWorkUnitService>(),
+            GetRequiredService<ITaskSuggestionService>()));
 
         RegisterSingleton(new ProjectTreeViewModel());
         RegisterSingleton(new RecentExternalFilesPanelViewModel(
@@ -69,29 +109,44 @@ public sealed class AppHost
             GetRequiredService<IStatisticsService>(),
             GetRequiredService<IExternalResourceService>(),
             GetRequiredService<IFocusModeService>(),
-            GetRequiredService<IProjectProgressService>()));
+            GetRequiredService<IProjectProgressService>(),
+            GetRequiredService<IGitService>()));
         RegisterSingleton(new ProjectInfoViewModel());
         RegisterSingleton(new FileViewModel(
             GetRequiredService<IProjectService>(),
-            GetRequiredService<ITaskService>()));
+            GetRequiredService<ITaskService>(),
+            GetRequiredService<IFileInspectionService>()));
         RegisterSingleton(new PlanningViewModel(GetRequiredService<ITaskService>()));
         RegisterSingleton(new VersionsViewModel(GetRequiredService<IDatabaseService>()));
-        RegisterSingleton(new TaskManagerViewModel(
-            GetRequiredService<ITaskService>(),
-            GetRequiredService<IProjectService>(),
-            GetRequiredService<IGitService>()));
+        RegisterSingleton(new TaskManagerViewModel(GetRequiredService<ITaskService>()));
         RegisterSingleton(new TaskDetailViewModel());
         RegisterSingleton(new StatisticsViewModel(GetRequiredService<IStatisticsService>()));
-        RegisterSingleton(new SettingsViewModel(GetRequiredService<IDatabaseService>()));
-        RegisterSingleton(new FocusModeViewModel(GetRequiredService<IFocusModeService>(), GetRequiredService<IOverlayService>()));
+        RegisterSingleton(new SettingsViewModel(
+            GetRequiredService<IDatabaseService>(),
+            GetRequiredService<IProjectService>(),
+            GetRequiredService<IActivityMonitorService>(),
+            GetRequiredService<IAccountService>(),
+            GetRequiredService<IEntitlementService>(),
+            GetRequiredService<IDeveloperProjectGeneratorService>()));
+        RegisterSingleton(new FocusModeViewModel(
+            GetRequiredService<IFocusModeService>(),
+            GetRequiredService<IOverlayService>(),
+            GetRequiredService<IAppSettingsService>(),
+            GetRequiredService<IForegroundWindowService>()));
+        RegisterSingleton(new ActivityDashboardViewModel(
+            GetRequiredService<IProjectService>(),
+            GetRequiredService<IActivityDashboardService>(),
+            GetRequiredService<IActivityMonitorService>(),
+            GetRequiredService<IActivityRepository>()));
         RegisterSingleton(new OverlayViewModel());
         RegisterSingleton(new CreateProjectViewModel(
             GetRequiredService<IProjectService>(),
             GetRequiredService<IDialogService>()));
         RegisterSingleton(new StartViewModel(
             GetRequiredService<IProjectService>(),
-            GetRequiredService<IRecentFilesService>()));
-        RegisterSingleton(new FloatingLogoViewModel());
+            GetRequiredService<IRecentFilesService>(),
+            GetRequiredService<IAccountService>()));
+        RegisterSingleton(new FloatingLogoViewModel(GetRequiredService<IFocusModeService>()));
         RegisterSingleton(new QuickMenuViewModel());
         RegisterSingleton(new QuickAddTaskViewModel(
             GetRequiredService<ITaskService>(),
@@ -102,6 +157,7 @@ public sealed class AppHost
             GetRequiredService<IExternalResourceService>(),
             GetRequiredService<IFileSystemProjectExplorerService>(),
             GetRequiredService<IWorkUnitService>(),
+            GetRequiredService<IAccountService>(),
             GetRequiredService<INavigationService>(),
             GetRequiredService<IDialogService>(),
             GetRequiredService<ProjectTreeViewModel>(),
@@ -114,7 +170,9 @@ public sealed class AppHost
             GetRequiredService<PlanningViewModel>(),
             GetRequiredService<VersionsViewModel>(),
             GetRequiredService<SettingsViewModel>(),
-            GetRequiredService<FocusModeViewModel>()));
+            GetRequiredService<FocusModeViewModel>(),
+            GetRequiredService<ActivityDashboardViewModel>(),
+            GetRequiredService<IActivityMonitorService>()));
 
         RegisterSingleton<IWindowManagerService>(new WindowManagerService(
             GetRequiredService<IAppSettingsService>(),
@@ -123,7 +181,12 @@ public sealed class AppHost
             GetRequiredService<ITrayIconService>(),
             GetRequiredService<IGlobalHotkeyService>(),
             GetRequiredService<ReachIT.Infrastructure.Logging.ILocalLogger>(),
+            GetRequiredService<IAccountService>(),
+            GetRequiredService<IDeveloperProjectGeneratorService>(),
             GetRequiredService<MainViewModel>(),
+            GetRequiredService<StartViewModel>(),
+            GetRequiredService<CreateProjectViewModel>(),
+            GetRequiredService<SettingsViewModel>(),
             GetRequiredService<FloatingLogoViewModel>(),
             GetRequiredService<QuickMenuViewModel>(),
             GetRequiredService<QuickAddTaskViewModel>()));

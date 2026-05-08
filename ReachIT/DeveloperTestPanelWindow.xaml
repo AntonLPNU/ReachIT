@@ -1,0 +1,92 @@
+<Window x:Class="ReachIT.DeveloperTestPanelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource Developer.PanelTitle}"
+        Icon="Resources/AppIcon.ico"
+        Width="620"
+        Height="520"
+        WindowStartupLocation="CenterOwner">
+    <Border Background="{StaticResource ReachItWindowBackgroundBrush}"
+            BorderBrush="{StaticResource ReachItBorderBrush}"
+            BorderThickness="1"
+            Padding="20">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="{DynamicResource Developer.PanelTitle}"
+                       Style="{StaticResource ReachItPageTitleTextStyle}"
+                       FontSize="24"
+                       Margin="0,0,0,14" />
+
+            <Border Grid.Row="1"
+                    Style="{StaticResource ReachItCardStyle}"
+                    Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock x:Name="ProjectText"
+                               Text="{DynamicResource Developer.CurrentProjectNone}"
+                               Style="{StaticResource ReachItLabelTextStyle}"
+                               Margin="0,0,0,12" />
+
+                    <WrapPanel>
+                        <Button Click="OnGenerateDemoProjectClick" Width="210" ToolTip="{DynamicResource Developer.GenerateDemoProjectTip}">
+                            <TextBlock Text="{DynamicResource Developer.GenerateDemoProject}" />
+                        </Button>
+                        <Button Click="OnGenerateRandomFilesClick"
+                                Width="190"
+                                Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                ToolTip="{DynamicResource Developer.GenerateRandomFilesTip}">
+                            <TextBlock Text="{DynamicResource Developer.GenerateRandomFiles}" />
+                        </Button>
+                        <Button Click="OnGenerateFormatCatalogClick"
+                                Width="190"
+                                Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                ToolTip="{DynamicResource Developer.GenerateFormatCatalogTip}">
+                            <TextBlock Text="{DynamicResource Developer.GenerateFormatCatalog}" />
+                        </Button>
+                        <Button Click="OnTouchFilesClick"
+                                Width="170"
+                                Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                ToolTip="{DynamicResource Developer.SimulateFileActivityTip}">
+                            <TextBlock Text="{DynamicResource Developer.SimulateFileActivity}" />
+                        </Button>
+                        <Button Click="OnOpenRandomFileClick"
+                                Width="160"
+                                Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                ToolTip="{DynamicResource Developer.OpenRandomFileTip}">
+                            <TextBlock Text="{DynamicResource Developer.OpenRandomFile}" />
+                        </Button>
+                    </WrapPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="{DynamicResource Developer.FileCount}" Style="{StaticResource ReachItLabelTextStyle}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBox x:Name="CountTextBox"
+                                 Text="20"
+                                 Width="70"
+                                 ToolTip="{DynamicResource Developer.FileCountTip}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="2" Style="{StaticResource ReachItCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{DynamicResource Developer.TestOutput}" Style="{StaticResource ReachItSectionTitleTextStyle}" />
+                    <TextBox x:Name="OutputTextBox"
+                             Grid.Row="1"
+                             IsReadOnly="True"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             Background="#101827" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

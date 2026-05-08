@@ -24,10 +24,12 @@ public sealed class ReachItDbContext : DbContext
     public DbSet<FocusSession> FocusSessions => Set<FocusSession>();
     public DbSet<ProductivityStat> ProductivityStats => Set<ProductivityStat>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<AccountSubscription> AccountSubscriptions => Set<AccountSubscription>();
     public DbSet<WorkItem> WorkItems => Set<WorkItem>();
     public DbSet<WorkUnit> WorkUnits => Set<WorkUnit>();
     public DbSet<Milestone> Milestones => Set<Milestone>();
     public DbSet<TaskSuggestion> TaskSuggestions => Set<TaskSuggestion>();
+    public DbSet<ActivityEvent> ActivityEvents => Set<ActivityEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,15 +48,18 @@ public sealed class ReachItDbContext : DbContext
         modelBuilder.Entity<FocusSession>().HasKey(x => x.Id);
         modelBuilder.Entity<ProductivityStat>().HasKey(x => x.Id);
         modelBuilder.Entity<User>().HasKey(x => x.Id);
+        modelBuilder.Entity<AccountSubscription>().HasKey(x => x.Id);
         modelBuilder.Entity<WorkItem>().HasKey(x => x.Id);
         modelBuilder.Entity<WorkUnit>().HasKey(x => x.Id);
         modelBuilder.Entity<Milestone>().HasKey(x => x.Id);
         modelBuilder.Entity<TaskSuggestion>().HasKey(x => x.Id);
+        modelBuilder.Entity<ActivityEvent>().HasKey(x => x.Id);
 
         modelBuilder.Entity<ProjectMeta>().Property(x => x.ProjectName).HasMaxLength(200).IsRequired();
         modelBuilder.Entity<ProjectMeta>().Property(x => x.Description).HasMaxLength(2000);
         modelBuilder.Entity<ProjectMeta>().Property(x => x.ProjectDirectoryPath).HasMaxLength(1500).IsRequired();
         modelBuilder.Entity<ProjectMeta>().Property(x => x.RitFilePath).HasMaxLength(1000);
+        modelBuilder.Entity<ProjectMeta>().Property(x => x.ProjectIgnoredFoldersSerialized).HasMaxLength(2000);
         modelBuilder.Entity<ProjectItem>().Property(x => x.Name).HasMaxLength(260).IsRequired();
         modelBuilder.Entity<ProjectItem>().Property(x => x.RelativePath).HasMaxLength(1500).IsRequired();
         modelBuilder.Entity<ProjectItem>().Property(x => x.ItemType).HasConversion<int>().IsRequired();
@@ -123,5 +128,31 @@ public sealed class ReachItDbContext : DbContext
         modelBuilder.Entity<TaskSuggestion>().Property(x => x.Reason).HasMaxLength(1000);
         modelBuilder.Entity<TaskSuggestion>().Property(x => x.Status).HasConversion<int>().IsRequired();
         modelBuilder.Entity<TaskSuggestion>().HasIndex(x => new { x.ProjectId, x.Status });
+
+        modelBuilder.Entity<ActivityEvent>().Property(x => x.EventType).HasConversion<int>().IsRequired();
+        modelBuilder.Entity<ActivityEvent>().Property(x => x.AppName).HasMaxLength(260);
+        modelBuilder.Entity<ActivityEvent>().Property(x => x.ProcessName).HasMaxLength(260);
+        modelBuilder.Entity<ActivityEvent>().Property(x => x.WindowTitle).HasMaxLength(1000);
+        modelBuilder.Entity<ActivityEvent>().Property(x => x.FilePath).HasMaxLength(2500);
+        modelBuilder.Entity<ActivityEvent>().Property(x => x.FolderPath).HasMaxLength(2500);
+        modelBuilder.Entity<ActivityEvent>().Property(x => x.MetadataJson).HasMaxLength(8000);
+        modelBuilder.Entity<ActivityEvent>().HasIndex(x => new { x.ProjectId, x.Timestamp });
+        modelBuilder.Entity<ActivityEvent>().HasIndex(x => new { x.ProjectId, x.EventType, x.Timestamp });
+
+        modelBuilder.Entity<User>().Property(x => x.UserName).HasMaxLength(120).IsRequired();
+        modelBuilder.Entity<User>().Property(x => x.LoginName).HasMaxLength(120).IsRequired();
+        modelBuilder.Entity<User>().Property(x => x.Email).HasMaxLength(320);
+        modelBuilder.Entity<User>().Property(x => x.DisplayName).HasMaxLength(160).IsRequired();
+        modelBuilder.Entity<User>().Property(x => x.PasswordHash).HasMaxLength(200);
+        modelBuilder.Entity<User>().Property(x => x.PasswordSalt).HasMaxLength(200);
+        modelBuilder.Entity<User>().HasIndex(x => x.Email);
+        modelBuilder.Entity<User>().HasIndex(x => x.LoginName).IsUnique();
+
+        modelBuilder.Entity<AccountSubscription>().Property(x => x.PlanType).HasConversion<int>().IsRequired();
+        modelBuilder.Entity<AccountSubscription>().Property(x => x.Status).HasConversion<int>().IsRequired();
+        modelBuilder.Entity<AccountSubscription>().Property(x => x.ExternalCustomerId).HasMaxLength(200);
+        modelBuilder.Entity<AccountSubscription>().Property(x => x.ExternalSubscriptionId).HasMaxLength(200);
+        modelBuilder.Entity<AccountSubscription>().Property(x => x.EntitlementsOverrideSerialized).HasMaxLength(2000);
+        modelBuilder.Entity<AccountSubscription>().HasIndex(x => x.UserId);
     }
 }

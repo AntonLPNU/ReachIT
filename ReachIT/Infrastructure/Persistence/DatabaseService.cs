@@ -34,7 +34,12 @@ public sealed class DatabaseService : IDatabaseService
 
         dbContext.Database.EnsureCreated();
         EnsureAppSettingsLanguageColumn();
+        EnsureProjectActivitySettingsColumns();
+        EnsureActivitySettingsColumns();
+        EnsureTaskQueueColumns();
+        EnsureAccountTables();
         EnsureWorkProgressTables();
+        EnsureActivityTables();
 
         return Task.CompletedTask;
     }
@@ -131,6 +136,135 @@ public sealed class DatabaseService : IDatabaseService
         command.ExecuteNonQuery();
     }
 
+    private static void EnsureProjectActivitySettingsColumns()
+    {
+        if (!File.Exists(ResolvedDatabasePath))
+        {
+            return;
+        }
+
+        using var connection = new SqliteConnection($"Data Source={ResolvedDatabasePath}");
+        connection.Open();
+
+        if (!TableExists(connection, "Projects"))
+        {
+            return;
+        }
+
+        AddColumnIfMissing(connection, "Projects", "UseProjectActivitySettings", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(connection, "Projects", "ProjectEnableActivityTracking", "INTEGER NOT NULL DEFAULT 1");
+        AddColumnIfMissing(connection, "Projects", "ProjectTrackActiveWindow", "INTEGER NOT NULL DEFAULT 1");
+        AddColumnIfMissing(connection, "Projects", "ProjectTrackFileChanges", "INTEGER NOT NULL DEFAULT 1");
+        AddColumnIfMissing(connection, "Projects", "ProjectTrackGitChanges", "INTEGER NOT NULL DEFAULT 1");
+        AddColumnIfMissing(connection, "Projects", "ProjectTrackTextStatistics", "INTEGER NOT NULL DEFAULT 1");
+        AddColumnIfMissing(connection, "Projects", "ProjectPauseActivityTracking", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(connection, "Projects", "ProjectIgnoredFoldersSerialized", "TEXT NOT NULL DEFAULT 'bin;obj;.git;.vs;node_modules;packages;build;dist'");
+    }
+
+    private static void EnsureActivitySettingsColumns()
+    {
+        if (!File.Exists(ResolvedDatabasePath))
+        {
+            return;
+        }
+
+        using var connection = new SqliteConnection($"Data Source={ResolvedDatabasePath}");
+        connection.Open();
+
+        if (!TableExists(connection, "AppSettings"))
+        {
+            return;
+        }
+
+        AddColumnIfMissing(connection, "AppSettings", "EnableActivityTracking", "INTEGER NOT NULL DEFAULT 1");
+        AddColumnIfMissing(connection, "AppSettings", "AllowedApplicationsSerialized", "TEXT NOT NULL DEFAULT 'ReachIT;explorer;SearchHost;ShellExperienceHost;StartMenuExperienceHost;ApplicationFrameHost;Code;Cursor;devenv;rider64;idea64;pycharm64;webstorm64;clion64;datagrip64;phpstorm64;eclipse;notepad;notepad++;Notepad;WINWORD;EXCEL;POWERPNT;OUTLOOK;OneNote;Acrobat;FoxitPDFEditor;chrome;msedge;firefox;brave;FreeCAD;blender;Blockbench;Aseprite;Resolve;fusion360;acad;SketchUp;3dsmax;Maya;Photoshop;Illustrator;figma;inkscape;gimp;paintdotnet;PaintStudio.View;WindowsTerminal;wt;powershell;cmd;git-bash;putty;winscp;postman;insomnia;docker desktop;Docker Desktop;slack;Teams;Zoom'");
+        AddColumnIfMissing(connection, "AppSettings", "FocusDistractingApplicationsSerialized", "TEXT NOT NULL DEFAULT ''");
+        AddColumnIfMissing(connection, "AppSettings", "TrackActiveWindow", "INTEGER NOT NULL DEFAULT 1");
+        AddColumnIfMissing(connection, "AppSettings", "TrackFileChanges", "INTEGER NOT NULL DEFAULT 1");
+        AddColumnIfMissing(connection, "AppSettings", "TrackGitChanges", "INTEGER NOT NULL DEFAULT 1");
+        AddColumnIfMissing(connection, "AppSettings", "TrackTextStatistics", "INTEGER NOT NULL DEFAULT 1");
+        AddColumnIfMissing(connection, "AppSettings", "IgnorePrivateApps", "INTEGER NOT NULL DEFAULT 1");
+        AddColumnIfMissing(connection, "AppSettings", "PauseActivityTracking", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(connection, "AppSettings", "PrivateAppsSerialized", "TEXT NOT NULL DEFAULT '1password;bitwarden;keepass;authenticator'");
+        AddColumnIfMissing(connection, "AppSettings", "IgnoredFoldersSerialized", "TEXT NOT NULL DEFAULT 'bin;obj;.git;.vs;node_modules;packages;build;dist'");
+    }
+
+    private static void EnsureTaskQueueColumns()
+    {
+        if (!File.Exists(ResolvedDatabasePath))
+        {
+            return;
+        }
+
+        using var connection = new SqliteConnection($"Data Source={ResolvedDatabasePath}");
+        connection.Open();
+
+        if (!TableExists(connection, "Tasks"))
+        {
+            return;
+        }
+
+        AddColumnIfMissing(connection, "Tasks", "StartedAtUtc", "TEXT NULL");
+        AddColumnIfMissing(connection, "Tasks", "CompletedAtUtc", "TEXT NULL");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Tasks_IsCompleted_Priority ON Tasks (IsCompleted, Priority);");
+    }
+
+    private static void EnsureAccountTables()
+    {
+        if (!File.Exists(ResolvedDatabasePath))
+        {
+            return;
+        }
+
+        using var connection = new SqliteConnection($"Data Source={ResolvedDatabasePath}");
+        connection.Open();
+
+        ExecuteNonQuery(connection, """
+            CREATE TABLE IF NOT EXISTS Users (
+                Id TEXT NOT NULL CONSTRAINT PK_Users PRIMARY KEY,
+                UserName TEXT NOT NULL DEFAULT 'local',
+                LoginName TEXT NOT NULL DEFAULT 'local',
+                Email TEXT NOT NULL DEFAULT '',
+                DisplayName TEXT NOT NULL DEFAULT 'Local User',
+                PasswordHash TEXT NOT NULL DEFAULT '',
+                PasswordSalt TEXT NOT NULL DEFAULT '',
+                IsActive INTEGER NOT NULL DEFAULT 1,
+                IsDeveloperAccount INTEGER NOT NULL DEFAULT 0,
+                CreatedAt TEXT NOT NULL DEFAULT '0001-01-01T00:00:00.0000000Z',
+                UpdatedAt TEXT NOT NULL DEFAULT '0001-01-01T00:00:00.0000000Z'
+            );
+            """);
+
+        AddColumnIfMissing(connection, "Users", "LoginName", "TEXT NOT NULL DEFAULT 'local'");
+        AddColumnIfMissing(connection, "Users", "DisplayName", "TEXT NOT NULL DEFAULT 'Local User'");
+        AddColumnIfMissing(connection, "Users", "PasswordHash", "TEXT NOT NULL DEFAULT ''");
+        AddColumnIfMissing(connection, "Users", "PasswordSalt", "TEXT NOT NULL DEFAULT ''");
+        AddColumnIfMissing(connection, "Users", "IsActive", "INTEGER NOT NULL DEFAULT 1");
+        AddColumnIfMissing(connection, "Users", "IsDeveloperAccount", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(connection, "Users", "CreatedAt", "TEXT NOT NULL DEFAULT '0001-01-01T00:00:00.0000000Z'");
+        AddColumnIfMissing(connection, "Users", "UpdatedAt", "TEXT NOT NULL DEFAULT '0001-01-01T00:00:00.0000000Z'");
+
+        ExecuteNonQuery(connection, """
+            CREATE TABLE IF NOT EXISTS AccountSubscriptions (
+                Id TEXT NOT NULL CONSTRAINT PK_AccountSubscriptions PRIMARY KEY,
+                UserId TEXT NOT NULL,
+                PlanType INTEGER NOT NULL DEFAULT 0,
+                Status INTEGER NOT NULL DEFAULT 0,
+                StartedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL,
+                CurrentPeriodEndsAt TEXT NULL,
+                TrialEndsAt TEXT NULL,
+                ExternalCustomerId TEXT NOT NULL DEFAULT '',
+                ExternalSubscriptionId TEXT NOT NULL DEFAULT '',
+                EntitlementsOverrideSerialized TEXT NOT NULL DEFAULT ''
+            );
+            """);
+
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Users_Email ON Users (Email);");
+        ExecuteNonQuery(connection, "CREATE UNIQUE INDEX IF NOT EXISTS IX_Users_LoginName ON Users (LoginName);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_AccountSubscriptions_UserId ON AccountSubscriptions (UserId);");
+    }
+
     private static void EnsureWorkProgressTables()
     {
         if (!File.Exists(ResolvedDatabasePath))
@@ -215,6 +349,48 @@ public sealed class DatabaseService : IDatabaseService
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WorkUnits_ProjectId_WorkItemId ON WorkUnits (ProjectId, WorkItemId);");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_WorkUnits_ProjectId_CreatedAt ON WorkUnits (ProjectId, CreatedAt);");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_TaskSuggestions_ProjectId_Status ON TaskSuggestions (ProjectId, Status);");
+    }
+
+    private static void EnsureActivityTables()
+    {
+        if (!File.Exists(ResolvedDatabasePath))
+        {
+            return;
+        }
+
+        using var connection = new SqliteConnection($"Data Source={ResolvedDatabasePath}");
+        connection.Open();
+
+        ExecuteNonQuery(connection, """
+            CREATE TABLE IF NOT EXISTS ActivityEvents (
+                Id TEXT NOT NULL CONSTRAINT PK_ActivityEvents PRIMARY KEY,
+                ProjectId TEXT NOT NULL,
+                WorkItemId TEXT NULL,
+                Timestamp TEXT NOT NULL,
+                EventType INTEGER NOT NULL,
+                AppName TEXT NOT NULL DEFAULT '',
+                ProcessName TEXT NOT NULL DEFAULT '',
+                WindowTitle TEXT NOT NULL DEFAULT '',
+                FilePath TEXT NULL,
+                FolderPath TEXT NULL,
+                DurationSeconds INTEGER NULL,
+                Value REAL NULL,
+                MetadataJson TEXT NOT NULL DEFAULT '{}'
+            );
+            """);
+
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ActivityEvents_ProjectId_Timestamp ON ActivityEvents (ProjectId, Timestamp);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_ActivityEvents_ProjectId_EventType_Timestamp ON ActivityEvents (ProjectId, EventType, Timestamp);");
+    }
+
+    private static void AddColumnIfMissing(SqliteConnection connection, string tableName, string columnName, string definition)
+    {
+        if (ColumnExists(connection, tableName, columnName))
+        {
+            return;
+        }
+
+        ExecuteNonQuery(connection, $"ALTER TABLE {tableName} ADD COLUMN {columnName} {definition};");
     }
 
     private static void ExecuteNonQuery(SqliteConnection connection, string commandText)

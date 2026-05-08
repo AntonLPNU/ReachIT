@@ -2,8 +2,10 @@
 using Microsoft.Win32;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using ReachIT.Domain.Models;
 using ReachIT.Presentation.ViewModels;
 
@@ -94,6 +96,19 @@ public partial class SidePanelWindow : Window
         {
             mainViewModel.OpenMainWorkspaceCommand.Execute(null);
         }
+    }
+
+    private void TreeViewItem_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        var item = FindVisualParent<TreeViewItem>((DependencyObject)e.OriginalSource);
+        if (item is null)
+        {
+            return;
+        }
+
+        item.Focus();
+        item.IsSelected = true;
+        e.Handled = false;
     }
 
     private void TitleArea_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -251,6 +266,21 @@ public partial class SidePanelWindow : Window
         }
 
         return monitorInfo.rcWork;
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject? source) where T : DependencyObject
+    {
+        while (source is not null)
+        {
+            if (source is T typed)
+            {
+                return typed;
+            }
+
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        return null;
     }
 
     [StructLayout(LayoutKind.Sequential)]
