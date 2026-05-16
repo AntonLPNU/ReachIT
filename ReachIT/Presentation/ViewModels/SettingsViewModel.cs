@@ -1,6 +1,7 @@
 // Exposes editable app settings placeholders.
 using System.Windows.Input;
 using ReachIT.Application.Contracts;
+using ReachIT.Application;
 using ReachIT.Domain.Models;
 using ReachIT.Presentation.Commands;
 using ReachIT.Presentation.Services;
@@ -27,7 +28,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private string _sidePanelHotkey = "Ctrl+Shift+R";
     private FocusModeType _defaultFocusMode = FocusModeType.Strict;
     private string _backupLocationPath = string.Empty;
-    private string _allowedApplications = "ReachIT;explorer;SearchHost;ShellExperienceHost;StartMenuExperienceHost;ApplicationFrameHost;Code;Cursor;devenv;rider64;idea64;pycharm64;webstorm64;clion64;datagrip64;phpstorm64;eclipse;notepad;notepad++;Notepad;WINWORD;EXCEL;POWERPNT;OUTLOOK;OneNote;Acrobat;FoxitPDFEditor;chrome;msedge;firefox;brave;FreeCAD;blender;Blockbench;Aseprite;Resolve;fusion360;acad;SketchUp;3dsmax;Maya;Photoshop;Illustrator;figma;inkscape;gimp;paintdotnet;PaintStudio.View;WindowsTerminal;wt;powershell;cmd;git-bash;putty;winscp;postman;insomnia;docker desktop;Docker Desktop;slack;Teams;Zoom";
+    private string _allowedApplications = "ReachIT;explorer;SearchHost;ShellExperienceHost;StartMenuExperienceHost;ApplicationFrameHost;Code;Cursor;devenv;rider64;idea64;pycharm64;webstorm64;clion64;datagrip64;phpstorm64;eclipse;notepad;notepad++;Notepad;WINWORD;EXCEL;POWERPNT;OUTLOOK;OneNote;Acrobat;FoxitPDFEditor;chrome;msedge;firefox;brave;FreeCAD;blender;Blockbench;Aseprite;Resolve;fusion360;acad;SketchUp;3dsmax;Maya;Photoshop;Illustrator;figma;inkscape;gimp;paintdotnet;PaintStudio.View;WindowsTerminal;wt;powershell;cmd;SnippingTool;ScreenClippingHost;Snipaste;ShareX;Lightshot;Greenshot;git-bash;putty;winscp;postman;insomnia;docker desktop;Docker Desktop;Spotify;Music.UI;iTunes;slack;Teams;Zoom";
     private string _focusDistractingApplications = string.Empty;
     private bool _enableActivityTracking = true;
     private bool _trackActiveWindow = true;
@@ -77,6 +78,7 @@ public sealed class SettingsViewModel : ViewModelBase
 
     public ICommand SaveCommand { get; }
     public ICommand GenerateDeveloperProjectCommand { get; }
+    public bool IsDeveloperToolsAvailable => DeveloperTools.IsEnabled;
 
     public IReadOnlyList<string> AvailableThemes { get; } = ["Light", "Dark", "System"];
 
@@ -242,9 +244,12 @@ public sealed class SettingsViewModel : ViewModelBase
             if (SetProperty(ref _isDeveloperAccount, value) && GenerateDeveloperProjectCommand is AsyncCommand command)
             {
                 command.RaiseCanExecuteChanged();
+                OnPropertyChanged(nameof(IsDeveloperPanelVisible));
             }
         }
     }
+
+    public bool IsDeveloperPanelVisible => DeveloperTools.IsEnabled && IsDeveloperAccount;
 
     public string DeveloperToolStatus
     {
@@ -399,6 +404,7 @@ public sealed class SettingsViewModel : ViewModelBase
         AccountEmail = account.User.Email;
         SubscriptionPlan = account.Subscription.PlanType;
         IsDeveloperAccount = account.User.IsDeveloperAccount || account.Subscription.PlanType == SubscriptionPlanType.Internal;
+        OnPropertyChanged(nameof(IsDeveloperPanelVisible));
         DeveloperLogin = ReachIT.Application.Services.AccountService.DeveloperLogin;
         DeveloperPassword = ReachIT.Application.Services.AccountService.DeveloperPassword;
         DeveloperToolStatus = IsDeveloperAccount
@@ -418,6 +424,7 @@ public sealed class SettingsViewModel : ViewModelBase
 
         var account = await _accountService.GetAccountStateAsync().ConfigureAwait(true);
         IsDeveloperAccount = account.User.IsDeveloperAccount || account.Subscription.PlanType == SubscriptionPlanType.Internal;
+        OnPropertyChanged(nameof(IsDeveloperPanelVisible));
         SubscriptionStatusText = FormatSubscriptionStatus(account.Subscription);
         AccountFeatureSummary = FormatFeatureSummary(account.Features);
     }

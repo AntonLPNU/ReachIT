@@ -10,5 +10,6 @@ public enum ProjectTreeNodeType
     ExternalFileLink = 4,
     WebLink = 5,
     OfflinePage = 6,
-    VirtualNode = 7
+    VirtualNode = 7,
+    Task = 8
 }

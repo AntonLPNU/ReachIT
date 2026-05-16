@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using Microsoft.VisualBasic;
 using ReachIT.Application.Contracts;
 using ReachIT.Domain.Models;
@@ -45,6 +46,21 @@ public sealed class MainDashboardViewModel : ViewModelBase
     private int _interruptionsCount;
     private int _totalFiles;
     private double _workItemProgressPercent;
+    private double _projectHealthScore;
+    private double _completedTasksPercent;
+    private double _activeTasksPercent;
+    private double _overdueTasksPercent;
+    private double _focusTodayPercent;
+    private double _fileActivityPercent;
+    private double _completedTasksChartHeight;
+    private double _activeTasksChartHeight;
+    private double _overdueTasksChartHeight;
+    private double _focusChartHeight;
+    private double _fileActivityChartHeight;
+    private double _healthChartHeight;
+    private double _progressChartHeight;
+    private double _productivityChartHeight;
+    private PointCollection _projectTrendPoints = new();
     private string _activeMilestoneTitle = "-";
     private int _workItemsInProgress;
     private int _filesChangedToday;
@@ -273,6 +289,103 @@ public sealed class MainDashboardViewModel : ViewModelBase
         private set => SetProperty(ref _workItemProgressPercent, value);
     }
 
+    public double ProjectHealthScore
+    {
+        get => _projectHealthScore;
+        private set => SetProperty(ref _projectHealthScore, value);
+    }
+
+    public double CompletedTasksPercent
+    {
+        get => _completedTasksPercent;
+        private set => SetProperty(ref _completedTasksPercent, value);
+    }
+
+    public double ActiveTasksPercent
+    {
+        get => _activeTasksPercent;
+        private set => SetProperty(ref _activeTasksPercent, value);
+    }
+
+    public double OverdueTasksPercent
+    {
+        get => _overdueTasksPercent;
+        private set => SetProperty(ref _overdueTasksPercent, value);
+    }
+
+    public double FocusTodayPercent
+    {
+        get => _focusTodayPercent;
+        private set => SetProperty(ref _focusTodayPercent, value);
+    }
+
+    public double FileActivityPercent
+    {
+        get => _fileActivityPercent;
+        private set => SetProperty(ref _fileActivityPercent, value);
+    }
+
+    public double CompletedTasksChartHeight
+    {
+        get => _completedTasksChartHeight;
+        private set => SetProperty(ref _completedTasksChartHeight, value);
+    }
+
+    public double ActiveTasksChartHeight
+    {
+        get => _activeTasksChartHeight;
+        private set => SetProperty(ref _activeTasksChartHeight, value);
+    }
+
+    public double OverdueTasksChartHeight
+    {
+        get => _overdueTasksChartHeight;
+        private set => SetProperty(ref _overdueTasksChartHeight, value);
+    }
+
+    public double FocusChartHeight
+    {
+        get => _focusChartHeight;
+        private set => SetProperty(ref _focusChartHeight, value);
+    }
+
+    public double FileActivityChartHeight
+    {
+        get => _fileActivityChartHeight;
+        private set => SetProperty(ref _fileActivityChartHeight, value);
+    }
+
+    public double HealthChartHeight
+    {
+        get => _healthChartHeight;
+        private set => SetProperty(ref _healthChartHeight, value);
+    }
+
+    public double ProgressChartHeight
+    {
+        get => _progressChartHeight;
+        private set => SetProperty(ref _progressChartHeight, value);
+    }
+
+    public double ProductivityChartHeight
+    {
+        get => _productivityChartHeight;
+        private set => SetProperty(ref _productivityChartHeight, value);
+    }
+
+    public PointCollection ProjectTrendPoints
+    {
+        get => _projectTrendPoints;
+        private set => SetProperty(ref _projectTrendPoints, value);
+    }
+
+    public Visibility SuggestedTasksEmptyVisibility => SuggestedTasks.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility SuggestedTasksListVisibility => SuggestedTasks.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility StaleWorkItemsEmptyVisibility => StaleWorkItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility StaleWorkItemsListVisibility => StaleWorkItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility RecentlyCompletedEmptyVisibility => RecentlyCompletedWorkItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility RecentlyCompletedListVisibility => RecentlyCompletedWorkItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
     public string ActiveMilestoneTitle
     {
         get => _activeMilestoneTitle;
@@ -379,10 +492,15 @@ public sealed class MainDashboardViewModel : ViewModelBase
         OverallProgress = WorkItemProgressPercent > 0
             ? WorkItemProgressPercent
             : TotalTasks == 0 ? 0 : Math.Round((double)CompletedTasks / TotalTasks * 100d, 1);
+        CompletedTasksPercent = PercentOf(CompletedTasks, TotalTasks);
+        ActiveTasksPercent = PercentOf(ActiveTasks, TotalTasks);
+        OverdueTasksPercent = PercentOf(OverdueTasks, TotalTasks);
         ActiveMilestoneTitle = progressSnapshot.ActiveMilestone?.Title ?? "-";
         WorkItemsInProgress = progressSnapshot.WorkItemsInProgress;
         FilesChangedToday = progressSnapshot.FilesChangedToday;
         FocusMinutesToday = progressSnapshot.FocusMinutesToday;
+        FocusTodayPercent = Math.Clamp(Math.Round(FocusMinutesToday / 120d * 100d, 1), 0, 100);
+        FileActivityPercent = Math.Clamp(Math.Round(FilesChangedToday / 8d * 100d, 1), 0, 100);
         CurrentWorkContext = progressSnapshot.CurrentWorkContext;
         ProjectState = TotalTasks == 0
             ? "Not started"
@@ -402,6 +520,8 @@ public sealed class MainDashboardViewModel : ViewModelBase
         WorkedWeekText = FormatHours(workedWeekHours);
         CompletedTasksToday = productivityToday?.CompletedTasks ?? 0;
         ProductivityScore = Math.Clamp((int)Math.Round((CompletedTasksToday * 18) + (workedWeekHours * 6) - (overdueTasks * 4)), 0, 100);
+        ProjectHealthScore = Math.Clamp(Math.Round((OverallProgress * 0.45) + (ProductivityScore * 0.35) + (FileActivityPercent * 0.1) + (FocusTodayPercent * 0.1) - (OverdueTasks * 3), 1), 0, 100);
+        UpdateChartGeometry();
         InterruptionsCount = Math.Max(0, activeTasks - CompletedTasksToday);
         TotalFiles = stats.TotalFiles > 0 ? stats.TotalFiles : CountFileNodes(tree);
         EmptyTaskMessage = TaskRows.Count == 0
@@ -413,6 +533,7 @@ public sealed class MainDashboardViewModel : ViewModelBase
         SyncCollection(SuggestedTasks, progressSnapshot.SuggestedTasks);
         SyncCollection(StaleWorkItems, progressSnapshot.StaleTasks);
         SyncCollection(RecentlyCompletedWorkItems, progressSnapshot.RecentlyCompletedTasks);
+        RefreshProgressSectionVisibility();
         SyncCollection(AllowedApplications, focusApps);
         SyncCollection(ExternalFiles, externalResources);
         SyncCollection(ProjectItems, projectItems);
@@ -607,6 +728,21 @@ public sealed class MainDashboardViewModel : ViewModelBase
         InterruptionsCount = 0;
         TotalFiles = 0;
         WorkItemProgressPercent = 0;
+        ProjectHealthScore = 0;
+        CompletedTasksPercent = 0;
+        ActiveTasksPercent = 0;
+        OverdueTasksPercent = 0;
+        FocusTodayPercent = 0;
+        FileActivityPercent = 0;
+        CompletedTasksChartHeight = 0;
+        ActiveTasksChartHeight = 0;
+        OverdueTasksChartHeight = 0;
+        FocusChartHeight = 0;
+        FileActivityChartHeight = 0;
+        HealthChartHeight = 0;
+        ProgressChartHeight = 0;
+        ProductivityChartHeight = 0;
+        ProjectTrendPoints = new PointCollection();
         ActiveMilestoneTitle = "-";
         WorkItemsInProgress = 0;
         FilesChangedToday = 0;
@@ -621,6 +757,7 @@ public sealed class MainDashboardViewModel : ViewModelBase
         SuggestedTasks.Clear();
         StaleWorkItems.Clear();
         RecentlyCompletedWorkItems.Clear();
+        RefreshProgressSectionVisibility();
         AllowedApplications.Clear();
         ExternalFiles.Clear();
         ProjectItems.Clear();
@@ -663,6 +800,72 @@ public sealed class MainDashboardViewModel : ViewModelBase
     {
         var ts = TimeSpan.FromHours(Math.Max(0, hours));
         return $"{(int)ts.TotalHours}h {ts.Minutes:D2}m";
+    }
+
+    private static double PercentOf(int value, int total)
+    {
+        return total <= 0
+            ? 0
+            : Math.Clamp(Math.Round((double)value / total * 100d, 1), 0, 100);
+    }
+
+    private void UpdateChartGeometry()
+    {
+        CompletedTasksChartHeight = ChartHeight(CompletedTasksPercent);
+        ActiveTasksChartHeight = ChartHeight(ActiveTasksPercent);
+        OverdueTasksChartHeight = ChartHeight(OverdueTasksPercent);
+        FocusChartHeight = ChartHeight(FocusTodayPercent);
+        FileActivityChartHeight = ChartHeight(FileActivityPercent);
+        HealthChartHeight = ChartHeight(ProjectHealthScore);
+        ProgressChartHeight = ChartHeight(OverallProgress);
+        ProductivityChartHeight = ChartHeight(ProductivityScore);
+
+        ProjectTrendPoints = BuildTrendPoints([
+            OverallProgress,
+            CompletedTasksPercent,
+            Math.Max(0, 100 - OverdueTasksPercent),
+            FileActivityPercent,
+            FocusTodayPercent,
+            ProductivityScore,
+            ProjectHealthScore
+        ]);
+    }
+
+    private static double ChartHeight(double percent)
+    {
+        return percent <= 0
+            ? 3
+            : Math.Clamp(Math.Round(percent * 1.35, 1), 3, 135);
+    }
+
+    private static PointCollection BuildTrendPoints(IReadOnlyList<double> values)
+    {
+        const double width = 320;
+        const double height = 120;
+        var points = new PointCollection();
+        if (values.Count == 0)
+        {
+            return points;
+        }
+
+        var step = values.Count == 1 ? 0 : width / (values.Count - 1);
+        for (var i = 0; i < values.Count; i++)
+        {
+            var value = Math.Clamp(values[i], 0, 100);
+            points.Add(new Point(Math.Round(i * step, 1), Math.Round(height - (value / 100d * height), 1)));
+        }
+
+        return points;
+    }
+
+    private void RefreshProgressSectionVisibility()
+    {
+        OnPropertyChanged(nameof(SuggestedTasksEmptyVisibility));
+        OnPropertyChanged(nameof(SuggestedTasksListVisibility));
+        OnPropertyChanged(nameof(StaleWorkItemsEmptyVisibility));
+        OnPropertyChanged(nameof(StaleWorkItemsListVisibility));
+        OnPropertyChanged(nameof(RecentlyCompletedEmptyVisibility));
+        OnPropertyChanged(nameof(RecentlyCompletedListVisibility));
     }
 
     private static int CountFileNodes(IEnumerable<ProjectTreeNode> nodes)

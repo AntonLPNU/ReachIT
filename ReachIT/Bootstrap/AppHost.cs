@@ -36,6 +36,7 @@ public sealed class AppHost
             GetRequiredService<IRecentFilesService>()));
         RegisterSingleton<IFileSystemProjectExplorerService>(new FileSystemProjectExplorerService(
             GetRequiredService<IExternalResourceService>()));
+        RegisterSingleton<IFileIconService>(new FileIconService());
         RegisterSingleton<IFileInspectionService>(new FileInspectionService());
         RegisterSingleton<ITaskService>(new TaskService(GetRequiredService<IDatabaseService>()));
 
@@ -69,10 +70,13 @@ public sealed class AppHost
         RegisterSingleton<IStatisticsService>(new StatisticsService(GetRequiredService<IDatabaseService>()));
         RegisterSingleton<IGitService>(new GitService());
         RegisterSingleton<IForegroundWindowService>(new ForegroundWindowService());
+        RegisterSingleton<IActiveBrowserUrlService>(new ActiveBrowserUrlService());
         RegisterSingleton<IFocusModeService>(new FocusModeService(
             GetRequiredService<IDatabaseService>(),
             GetRequiredService<IForegroundWindowService>(),
-            GetRequiredService<IAppSettingsService>()));
+            GetRequiredService<IAppSettingsService>(),
+            GetRequiredService<IProjectService>(),
+            GetRequiredService<IActiveBrowserUrlService>()));
         RegisterSingleton<IFileActivityWatcherService>(new FileActivityWatcherService());
         RegisterSingleton<IGitActivityService>(new GitActivityService(GetRequiredService<IGitService>()));
         RegisterSingleton<IWorkContextDetectorService>(new WorkContextDetectorService(
@@ -118,7 +122,9 @@ public sealed class AppHost
             GetRequiredService<IFileInspectionService>()));
         RegisterSingleton(new PlanningViewModel(GetRequiredService<ITaskService>()));
         RegisterSingleton(new VersionsViewModel(GetRequiredService<IDatabaseService>()));
-        RegisterSingleton(new TaskManagerViewModel(GetRequiredService<ITaskService>()));
+        RegisterSingleton(new TaskManagerViewModel(
+            GetRequiredService<ITaskService>(),
+            GetRequiredService<IProjectService>()));
         RegisterSingleton(new TaskDetailViewModel());
         RegisterSingleton(new StatisticsViewModel(GetRequiredService<IStatisticsService>()));
         RegisterSingleton(new SettingsViewModel(
@@ -132,12 +138,20 @@ public sealed class AppHost
             GetRequiredService<IFocusModeService>(),
             GetRequiredService<IOverlayService>(),
             GetRequiredService<IAppSettingsService>(),
-            GetRequiredService<IForegroundWindowService>()));
+            GetRequiredService<IForegroundWindowService>(),
+            GetRequiredService<IProjectService>(),
+            GetRequiredService<IActiveBrowserUrlService>()));
+        RegisterSingleton(new WebResourcesViewModel(
+            GetRequiredService<IProjectService>(),
+            GetRequiredService<IExternalResourceService>(),
+            GetRequiredService<ITaskService>(),
+            GetRequiredService<IActiveBrowserUrlService>()));
         RegisterSingleton(new ActivityDashboardViewModel(
             GetRequiredService<IProjectService>(),
             GetRequiredService<IActivityDashboardService>(),
             GetRequiredService<IActivityMonitorService>(),
             GetRequiredService<IActivityRepository>()));
+        RegisterSingleton(new DocumentationViewModel());
         RegisterSingleton(new OverlayViewModel());
         RegisterSingleton(new CreateProjectViewModel(
             GetRequiredService<IProjectService>(),
@@ -156,8 +170,11 @@ public sealed class AppHost
             GetRequiredService<IProjectService>(),
             GetRequiredService<IExternalResourceService>(),
             GetRequiredService<IFileSystemProjectExplorerService>(),
+            GetRequiredService<ITaskService>(),
+            GetRequiredService<IFileIconService>(),
             GetRequiredService<IWorkUnitService>(),
             GetRequiredService<IAccountService>(),
+            GetRequiredService<IActiveBrowserUrlService>(),
             GetRequiredService<INavigationService>(),
             GetRequiredService<IDialogService>(),
             GetRequiredService<ProjectTreeViewModel>(),
@@ -171,7 +188,9 @@ public sealed class AppHost
             GetRequiredService<VersionsViewModel>(),
             GetRequiredService<SettingsViewModel>(),
             GetRequiredService<FocusModeViewModel>(),
+            GetRequiredService<WebResourcesViewModel>(),
             GetRequiredService<ActivityDashboardViewModel>(),
+            GetRequiredService<DocumentationViewModel>(),
             GetRequiredService<IActivityMonitorService>()));
 
         RegisterSingleton<IWindowManagerService>(new WindowManagerService(

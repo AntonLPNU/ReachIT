@@ -1,7 +1,9 @@
 // Reads project filesystem structure and builds explorer nodes.
 using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 using ReachIT.Application.Contracts;
+using ReachIT.Application.Security;
 using ReachIT.Domain.Enums;
 using ReachIT.Domain.Models;
 
@@ -43,6 +45,13 @@ public sealed class FileSystemProjectExplorerService : IFileSystemProjectExplore
 
             foreach (var resource in externalResources)
             {
+                if (!string.IsNullOrWhiteSpace(resource.StoredPath)
+                    && File.Exists(resource.StoredPath)
+                    && IsInsideProject(project.ProjectDirectoryPath, resource.StoredPath))
+                {
+                    continue;
+                }
+
                 var nodeType = resource.ResourceType switch
                 {
                     ExternalResourceType.WebLink => ProjectTreeNodeType.WebLink,
@@ -306,7 +315,11 @@ public sealed class FileSystemProjectExplorerService : IFileSystemProjectExplore
     private static ProjectTreeNode BuildFileNode(ProjectMeta project, FileInfo file, string parentRelativePath)
     {
         var relativePath = Path.GetRelativePath(project.ProjectDirectoryPath, file.FullName);
-        var nodeType = file.Extension.Equals(".rit", StringComparison.OrdinalIgnoreCase)
+        var isWebResourceLink = file.Name.EndsWith(".reachit-link.json", StringComparison.OrdinalIgnoreCase);
+        var webResource = isWebResourceLink ? TryReadWebResource(file.FullName) : null;
+        var nodeType = isWebResourceLink
+            ? ProjectTreeNodeType.WebLink
+            : file.Extension.Equals(".rit", StringComparison.OrdinalIgnoreCase)
             ? ProjectTreeNodeType.RitConfigFile
             : ProjectTreeNodeType.File;
 
@@ -314,13 +327,29 @@ public sealed class FileSystemProjectExplorerService : IFileSystemProjectExplore
         {
             Id = Guid.NewGuid(),
             ProjectMetaId = project.Id,
-            Name = file.Name,
+            Name = webResource?.Title ?? file.Name,
             FullPath = file.FullName,
             RelativePath = relativePath,
             NodeType = nodeType,
             IsDirectory = false,
-            IsExternal = false
+            IsExternal = isWebResourceLink,
+            ExternalTargetPathOrUrl = webResource is not null && WebResourceSecurity.IsSafeWebUrl(webResource.PrimaryUrl)
+                ? webResource.PrimaryUrl
+                : null
         };
+    }
+
+    private static WebResourceLinkMetadata? TryReadWebResource(string path)
+    {
+        try
+        {
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<WebResourceLinkMetadata>(json);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static string ResolveTargetDirectory(ProjectMeta project, ProjectTreeNode? selectedNode)

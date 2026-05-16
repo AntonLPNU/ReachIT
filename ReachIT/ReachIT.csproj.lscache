@@ -14,7 +14,7 @@ lastDtbSucceeded
 
 [properties]
 AssemblyName=ReachIT
-CommandLineArgsForDesignTimeEvaluation=-langversion:latest -define:TRACE
+CommandLineArgsForDesignTimeEvaluation=-langversion:latest -define:TRACE;ENABLE_DEVELOPER_TOOLS
 CompilerGeneratedFilesOutputPath=
 MaxSupportedLangVersion=12.0
 ProjectAssetsFile=<PATH>obj/project.assets.json
@@ -36,7 +36,7 @@ TemporaryDependencyNodeTargetIdentifier=net8.0-windows
 /nostdlib+
 /errorreport:prompt
 /warn:8
-/define:TRACE;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
+/define:TRACE;ENABLE_DEVELOPER_TOOLS;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
 /highentropyva+
 /nullable:enable
 /debug+
@@ -58,6 +58,7 @@ AccountLoginWindow.xaml.cs
 App.xaml.cs
 Application/Contracts/
  IAccountService.cs
+ IActiveBrowserUrlService.cs
  IActivityDashboardService.cs
  IActivityMonitorService.cs
  IActivityRepository.cs
@@ -68,6 +69,7 @@ Application/Contracts/
  IEntitlementService.cs
  IExternalResourceService.cs
  IFileActivityWatcherService.cs
+ IFileIconService.cs
  IFileInspectionService.cs
  IFileSystemProjectExplorerService.cs
  IFocusModeService.cs
@@ -94,33 +96,37 @@ Application/Contracts/
  IWorkItemService.cs
  IWorkUnitRepository.cs
  IWorkUnitService.cs
-Application/Services/
- AccountService.cs
- ActivityDashboardService.cs
- ActivityMonitorService.cs
- AppSettingsService.cs
- DeveloperProjectGeneratorService.cs
- EntitlementService.cs
- ExternalResourceService.cs
- FileActivityWatcherService.cs
- FileInspectionService.cs
- FileSystemProjectExplorerService.cs
- FocusModeService.cs
- ForegroundWindowService.cs
- GitActivityService.cs
- GitService.cs
- ProductivityScoringService.cs
- ProgressCalculationService.cs
- ProjectProgressService.cs
- ProjectService.cs
- RecentFilesService.cs
- StatisticsService.cs
- TaskLinkingService.cs
- TaskService.cs
- TaskSuggestionService.cs
- WorkContextDetectorService.cs
- WorkItemService.cs
- WorkUnitService.cs
+Application/
+ DeveloperTools.cs
+ Security/WebResourceSecurity.cs
+ Services/
+  AccountService.cs
+  ActivityDashboardService.cs
+  ActivityMonitorService.cs
+  AppSettingsService.cs
+  DeveloperProjectGeneratorService.cs
+  EntitlementService.cs
+  ExternalResourceService.cs
+  FileActivityWatcherService.cs
+  FileIconService.cs
+  FileInspectionService.cs
+  FileSystemProjectExplorerService.cs
+  FocusModeService.cs
+  ForegroundWindowService.cs
+  GitActivityService.cs
+  GitService.cs
+  ProductivityScoringService.cs
+  ProgressCalculationService.cs
+  ProjectProgressService.cs
+  ProjectService.cs
+  RecentFilesService.cs
+  StatisticsService.cs
+  TaskLinkingService.cs
+  TaskService.cs
+  TaskSuggestionService.cs
+  WorkContextDetectorService.cs
+  WorkItemService.cs
+  WorkUnitService.cs
 AssemblyInfo.cs
 Bootstrap/AppHost.cs
 CreateProjectWindow.xaml.cs
@@ -169,13 +175,16 @@ Domain/Models/
  TaskSuggestion.cs
  TaskTag.cs
  User.cs
+ WebResourceLinkMetadata.cs
  WorkItem.cs
  WorkUnit.cs
 FloatingLogoWindow.xaml.cs
 FocusWarningWindow.xaml.cs
 Infrastructure/
  Logging/LocalLogger.cs
- OS/ProcessMonitorService.cs
+ OS/
+  ActiveBrowserUrlService.cs
+  ProcessMonitorService.cs
  Persistence/
   ActivityRepository.cs
   DatabaseService.cs
@@ -198,6 +207,7 @@ obj/Debug/net8.0-windows/
  Presentation/Views/
   ActivityDashboardView.g.cs
   CreateProjectView.g.cs
+  DocumentationView.g.cs
   FileView.g.cs
   FocusModeView.g.cs
   MainDashboardView.g.cs
@@ -207,8 +217,10 @@ obj/Debug/net8.0-windows/
   SettingsView.g.cs
   StartView.g.cs
   StatisticsView.g.cs
+  TaskDiagramStyleWindow.g.cs
   TaskManagerView.g.cs
   VersionsView.g.cs
+  WebResourcesView.g.cs
  QuickAddTaskWindow.g.cs
  QuickMenuWindow.g.cs
  ReachIT.AssemblyInfo.cs
@@ -229,6 +241,7 @@ Presentation/Services/
 Presentation/ViewModels/
  ActivityDashboardViewModel.cs
  CreateProjectViewModel.cs
+ DocumentationViewModel.cs
  FileViewModel.cs
  FloatingLogoViewModel.cs
  FocusModeViewModel.cs
@@ -249,9 +262,12 @@ Presentation/ViewModels/
  TaskManagerViewModel.cs
  VersionsViewModel.cs
  ViewModelBase.cs
+ WebResourceItemViewModel.cs
+ WebResourcesViewModel.cs
 Presentation/Views/
  ActivityDashboardView.xaml.cs
  CreateProjectView.xaml.cs
+ DocumentationView.xaml.cs
  FileView.xaml.cs
  FocusModeView.xaml.cs
  MainDashboardView.xaml.cs
@@ -261,8 +277,10 @@ Presentation/Views/
  SettingsView.xaml.cs
  StartView.xaml.cs
  StatisticsView.xaml.cs
+ TaskDiagramStyleWindow.xaml.cs
  TaskManagerView.xaml.cs
  VersionsView.xaml.cs
+ WebResourcesView.xaml.cs
 QuickAddTaskWindow.xaml.cs
 QuickMenuWindow.xaml.cs
 Resources/Converters/BooleanToVisibilityConverter.cs
@@ -538,6 +556,14 @@ StartWindow.xaml.cs
  microsoft.extensions.logging/8.0.0/lib/net8.0/Microsoft.Extensions.Logging.dll
  microsoft.extensions.options/8.0.0/lib/net8.0/Microsoft.Extensions.Options.dll
  microsoft.extensions.primitives/8.0.0/lib/net8.0/Microsoft.Extensions.Primitives.dll
+ sharpvectors.wpf/1.8.5/lib/net8.0-windows7.0/
+  SharpVectors.Converters.Wpf.dll
+  SharpVectors.Core.dll
+  SharpVectors.Css.dll
+  SharpVectors.Dom.dll
+  SharpVectors.Model.dll
+  SharpVectors.Rendering.Wpf.dll
+  SharpVectors.Runtime.Wpf.dll
  sqlitepclraw.bundle_e_sqlite3/2.1.6/lib/netstandard2.0/SQLitePCLRaw.batteries_v2.dll
  sqlitepclraw.core/2.1.6/lib/netstandard2.0/SQLitePCLRaw.core.dll
  sqlitepclraw.provider.e_sqlite3/2.1.6/lib/net6.0-windows7.0/SQLitePCLRaw.provider.e_sqlite3.dll

@@ -94,10 +94,17 @@ public sealed class StartViewModel : ViewModelBase
 
     private async Task OpenProjectAsync()
     {
-        var project = await _projectService.OpenProjectFromDialogAsync().ConfigureAwait(true);
-        if (!string.IsNullOrWhiteSpace(project?.ProjectDirectoryPath))
+        try
         {
-            CompleteOpen(project.ProjectDirectoryPath);
+            var project = await _projectService.OpenProjectFromDialogAsync().ConfigureAwait(true);
+            if (!string.IsNullOrWhiteSpace(project?.ProjectDirectoryPath))
+            {
+                CompleteOpen(project.ProjectDirectoryPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not open this folder as a ReachIT project.\n\n{ex.Message}", "ReachIT", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -116,10 +123,17 @@ public sealed class StartViewModel : ViewModelBase
             return;
         }
 
-        var opened = await _projectService.OpenProjectAsync(project.ProjectDirectoryPath).ConfigureAwait(true);
-        if (!string.IsNullOrWhiteSpace(opened?.ProjectDirectoryPath))
+        try
         {
-            CompleteOpen(opened.ProjectDirectoryPath);
+            var opened = await _projectService.OpenProjectAsync(project.ProjectDirectoryPath).ConfigureAwait(true);
+            if (!string.IsNullOrWhiteSpace(opened?.ProjectDirectoryPath))
+            {
+                CompleteOpen(opened.ProjectDirectoryPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not open this recent project.\n\n{ex.Message}", "ReachIT", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 

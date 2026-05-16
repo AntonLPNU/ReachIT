@@ -1,5 +1,6 @@
 // Manages the recent external files panel below project explorer.
 using System.Collections.ObjectModel;
+using System.Windows;
 using System.Windows.Input;
 using ReachIT.Application.Contracts;
 using ReachIT.Domain.Models;
@@ -97,7 +98,14 @@ public sealed class RecentExternalFilesPanelViewModel : ViewModelBase
             return;
         }
 
-        await _externalResourceService.SaveAsLinkAsync(_projectService.CurrentProject.Id, SelectedItem.SourcePathOrUrl).ConfigureAwait(true);
+        try
+        {
+            await _externalResourceService.SaveAsLinkAsync(_projectService.CurrentProject.Id, SelectedItem.SourcePathOrUrl).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Blocked unsafe link.\n\n{ex.Message}", "ReachIT Security", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private async Task RemoveFromRecentAsync()

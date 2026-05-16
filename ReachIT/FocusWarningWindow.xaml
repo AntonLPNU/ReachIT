@@ -4,7 +4,7 @@
         xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         Title="Focus warning"
         Icon="Resources/AppIcon.ico"
-        Width="520"
+        Width="690"
         SizeToContent="Height"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -60,32 +60,32 @@
                        Style="{StaticResource ReachItMutedTextStyle}"
                        Margin="0,16,0,16" />
 
-            <Grid Grid.Row="2">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <Button Grid.Column="1" Click="BackButton_Click" ToolTip="Hide this warning and return to your work.">
+            <WrapPanel Grid.Row="2" HorizontalAlignment="Right">
+                <Button Click="BackButton_Click" ToolTip="Hide this warning and return to your work." Margin="0,0,8,8">
                     <StackPanel Orientation="Horizontal">
                         <iconPacks:PackIconMaterial Kind="KeyboardReturn" Width="16" Height="16" Margin="0,0,8,0" />
                         <TextBlock Text="Back to work" />
                     </StackPanel>
                 </Button>
-                <Button Grid.Column="2" Click="WhitelistButton_Click" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Add this app to the focus whitelist after confirmation.">
+                <Button Click="AllowPageOnceButton_Click" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Allow only the current browser page. The next Shorts/Reels page must be approved again." Margin="0,0,8,8">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="LinkVariant" Width="16" Height="16" Margin="0,0,8,0" />
+                        <TextBlock Text="Allow page once" />
+                    </StackPanel>
+                </Button>
+                <Button Click="WhitelistButton_Click" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Add this app to the focus whitelist after confirmation." Margin="0,0,8,8">
                     <StackPanel Orientation="Horizontal">
                         <iconPacks:PackIconMaterial Kind="FormatListChecks" Width="16" Height="16" Margin="0,0,8,0" />
                         <TextBlock Text="Allow this app" />
                     </StackPanel>
                 </Button>
-                <Button Grid.Column="3" Click="StopFocusButton_Click" Style="{StaticResource ReachItDangerButtonStyle}" ToolTip="Stop Focus Mode.">
+                <Button Click="StopFocusButton_Click" Style="{StaticResource ReachItDangerButtonStyle}" ToolTip="Stop Focus Mode." Margin="0,0,0,8">
                     <StackPanel Orientation="Horizontal">
                         <iconPacks:PackIconMaterial Kind="Stop" Width="16" Height="16" Margin="0,0,8,0" />
                         <TextBlock Text="Stop focus" />
                     </StackPanel>
                 </Button>
-            </Grid>
+            </WrapPanel>
         </Grid>
     </Border>
 </Window>

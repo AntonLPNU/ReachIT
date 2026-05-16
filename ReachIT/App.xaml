@@ -41,6 +41,12 @@
         <DataTemplate DataType="{x:Type viewModels:FocusModeViewModel}">
             <views:FocusModeView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:WebResourcesViewModel}">
+            <views:WebResourcesView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:DocumentationViewModel}">
+            <views:DocumentationView />
+        </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

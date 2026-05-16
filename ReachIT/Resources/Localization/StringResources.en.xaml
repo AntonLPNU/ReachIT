@@ -7,6 +7,7 @@
     <sys:String x:Key="Menu.View">View</sys:String>
     <sys:String x:Key="Menu.Focus">Focus</sys:String>
     <sys:String x:Key="Menu.Developer">Developer</sys:String>
+    <sys:String x:Key="Menu.CreateProject">Create Project</sys:String>
     <sys:String x:Key="Menu.OpenProjectFolder">Open Project Folder</sys:String>
     <sys:String x:Key="Menu.CloseProject">Close Project</sys:String>
     <sys:String x:Key="Menu.AccountLogin">Account Login</sys:String>
@@ -51,6 +52,8 @@
     <sys:String x:Key="Developer.GenerateDemoProjectTip">Create a complete demo project in a folder you choose.</sys:String>
     <sys:String x:Key="Developer.GenerateRandomFiles">Generate random files</sys:String>
     <sys:String x:Key="Developer.GenerateRandomFilesTip">Generate random files inside the current project.</sys:String>
+    <sys:String x:Key="Developer.GenerateTestTasks">Generate test tasks</sys:String>
+    <sys:String x:Key="Developer.GenerateTestTasksTip">Add a realistic task backlog to the current project without creating files.</sys:String>
     <sys:String x:Key="Developer.GenerateFormatCatalog">Generate format catalog</sys:String>
     <sys:String x:Key="Developer.GenerateFormatCatalogTip">Generate one sample file for every supported test extension.</sys:String>
     <sys:String x:Key="Developer.SimulateFileActivity">Simulate file activity</sys:String>
@@ -78,6 +81,26 @@
     <sys:String x:Key="Create.AutofillTestProject">Autofill Test Project</sys:String>
     <sys:String x:Key="Create.CreateProject">Create Project</sys:String>
     <sys:String x:Key="Create.Cancel">Cancel</sys:String>
+    <sys:String x:Key="Create.TemplateHelp.Study">For labs, courses, exam prep, notes, and self-learning. It starts from requirements, topic breakdown, materials, main work, and final check.</sys:String>
+    <sys:String x:Key="Create.TemplateHelp.Freelance">For client work. It keeps requirements, references, review rounds, revisions, and final delivery visible.</sys:String>
+    <sys:String x:Key="Create.TemplateHelp.Creative">For games, books, videos, mods, art, design, music, and other creative work. It turns an idea into a draft and then into a finished result.</sys:String>
+    <sys:String x:Key="Create.TemplateHelp.Research">For analysis, comparison, investigation, and reports. It moves from a question to sources, analysis, and a clear conclusion.</sys:String>
+    <sys:String x:Key="Create.TemplateHelp.Empty">A mostly empty project with one gentle planning task so the screen is not blank.</sys:String>
+    <sys:String x:Key="Create.MainTopic.Study">Subject / topic</sys:String>
+    <sys:String x:Key="Create.MainTopic.Freelance">Client / order</sys:String>
+    <sys:String x:Key="Create.MainTopic.Creative">Type / idea</sys:String>
+    <sys:String x:Key="Create.MainTopic.Research">Research question</sys:String>
+    <sys:String x:Key="Create.MainTopic.Default">Main direction</sys:String>
+    <sys:String x:Key="Create.ResultFormat.Study">Result format</sys:String>
+    <sys:String x:Key="Create.ResultFormat.Freelance">Delivery format</sys:String>
+    <sys:String x:Key="Create.ResultFormat.Creative">Final format</sys:String>
+    <sys:String x:Key="Create.ResultFormat.Research">Research output</sys:String>
+    <sys:String x:Key="Create.ResultFormat.Default">Output format</sys:String>
+    <sys:String x:Key="Create.KnownSections.Study">Known subtopics</sys:String>
+    <sys:String x:Key="Create.KnownSections.Freelance">Known requirements</sys:String>
+    <sys:String x:Key="Create.KnownSections.Creative">Known parts</sys:String>
+    <sys:String x:Key="Create.KnownSections.Research">Known directions</sys:String>
+    <sys:String x:Key="Create.KnownSections.Default">Known stages</sys:String>
 
     <sys:String x:Key="Dashboard.ControlCenter">Control Center</sys:String>
     <sys:String x:Key="Dashboard.ProjectOverview">Project overview</sys:String>
@@ -129,6 +152,7 @@
     <sys:String x:Key="Explorer.NewFileTip">Create a new file in the selected folder.</sys:String>
     <sys:String x:Key="Explorer.NewFolderTip">Create a new folder in the selected folder.</sys:String>
     <sys:String x:Key="Explorer.TaskTip">Open Task Manager.</sys:String>
+    <sys:String x:Key="Explorer.AddWebResourceTip">Add a web page to Web Resources.</sys:String>
     <sys:String x:Key="Explorer.OpenTip">Open the selected file or folder.</sys:String>
     <sys:String x:Key="Explorer.RenameTip">Rename the selected item.</sys:String>
     <sys:String x:Key="Explorer.DeleteTip">Delete the selected item.</sys:String>
@@ -162,6 +186,8 @@
 
     <sys:String x:Key="Start.Title">ReachIT Hub</sys:String>
     <sys:String x:Key="Start.Subtitle">Choose a project, create a new workspace, or check what's new before ReachIT moves into the background.</sys:String>
+    <sys:String x:Key="Start.QuickActions">Quick actions</sys:String>
+    <sys:String x:Key="Start.Account">Account</sys:String>
     <sys:String x:Key="Start.OpenProject">Open Project Folder</sys:String>
     <sys:String x:Key="Start.CreateProject">+ Create New Project</sys:String>
     <sys:String x:Key="Start.Settings">Settings</sys:String>

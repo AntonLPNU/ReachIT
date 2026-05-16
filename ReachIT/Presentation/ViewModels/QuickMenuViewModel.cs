@@ -8,6 +8,9 @@ public sealed class QuickMenuViewModel : ViewModelBase
     public event EventHandler? NewTaskRequested;
     public event EventHandler? ProjectExplorerRequested;
     public event EventHandler? FocusModeRequested;
+    public event EventHandler? AddCurrentSiteRequested;
+    public event EventHandler<string>? HighlightRequested;
+    public event EventHandler? WebResourcesRequested;
     public event EventHandler? StatisticsRequested;
     public event EventHandler? MainWindowRequested;
     public event EventHandler? SettingsRequested;
@@ -19,6 +22,9 @@ public sealed class QuickMenuViewModel : ViewModelBase
         NewTaskCommand = new RelayCommand(_ => NewTaskRequested?.Invoke(this, EventArgs.Empty));
         ProjectExplorerCommand = new RelayCommand(_ => ProjectExplorerRequested?.Invoke(this, EventArgs.Empty));
         FocusModeCommand = new RelayCommand(_ => FocusModeRequested?.Invoke(this, EventArgs.Empty));
+        AddCurrentSiteCommand = new RelayCommand(_ => AddCurrentSiteRequested?.Invoke(this, EventArgs.Empty));
+        HighlightCommand = new RelayCommand(color => HighlightRequested?.Invoke(this, color?.ToString() ?? "yellow"));
+        WebResourcesCommand = new RelayCommand(_ => WebResourcesRequested?.Invoke(this, EventArgs.Empty));
         StatisticsCommand = new RelayCommand(_ => StatisticsRequested?.Invoke(this, EventArgs.Empty));
         MainWindowCommand = new RelayCommand(_ => MainWindowRequested?.Invoke(this, EventArgs.Empty));
         SettingsCommand = new RelayCommand(_ => SettingsRequested?.Invoke(this, EventArgs.Empty));
@@ -29,6 +35,9 @@ public sealed class QuickMenuViewModel : ViewModelBase
     public ICommand NewTaskCommand { get; }
     public ICommand ProjectExplorerCommand { get; }
     public ICommand FocusModeCommand { get; }
+    public ICommand AddCurrentSiteCommand { get; }
+    public ICommand HighlightCommand { get; }
+    public ICommand WebResourcesCommand { get; }
     public ICommand StatisticsCommand { get; }
     public ICommand MainWindowCommand { get; }
     public ICommand SettingsCommand { get; }

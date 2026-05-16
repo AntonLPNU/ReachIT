@@ -11,6 +11,7 @@ namespace ReachIT.Presentation.ViewModels;
 public sealed class TaskManagerViewModel : ViewModelBase
 {
     private readonly ITaskService _taskService;
+    private readonly IProjectService _projectService;
     private readonly AsyncCommand _editTaskCommand;
     private readonly AsyncCommand _deleteTaskCommand;
     private readonly AsyncCommand _markCompletedCommand;
@@ -28,12 +29,20 @@ public sealed class TaskManagerViewModel : ViewModelBase
     private string _deadlineValidationMessage = string.Empty;
     private string _searchText = string.Empty;
     private bool _showActiveOnly;
+    private bool _isCanvasView = true;
+    private TaskDiagramStyle _diagramStyle = TaskDiagramStyle.ReachIt;
+    private double _canvasWidth = 960;
+    private double _canvasHeight = 520;
 
-    public TaskManagerViewModel(ITaskService taskService)
+    public TaskManagerViewModel(ITaskService taskService, IProjectService projectService)
     {
         _taskService = taskService;
+        _projectService = projectService;
 
         AddTaskCommand = new AsyncCommand(_ => AddTaskAsync());
+        SelectTaskCommand = new RelayCommand(p => SelectTask(p as TaskItem));
+        SetListViewCommand = new RelayCommand(_ => IsCanvasView = false);
+        SetCanvasViewCommand = new RelayCommand(_ => IsCanvasView = true);
         _editTaskCommand = new AsyncCommand(_ => EditTaskAsync(), _ => SelectedTask is not null);
         _deleteTaskCommand = new AsyncCommand(_ => DeleteTaskAsync(), _ => SelectedTask is not null);
         _markCompletedCommand = new AsyncCommand(_ => MarkCompletedAsync(), _ => SelectedTask is not null && !SelectedTask.IsCompleted);
@@ -55,6 +64,8 @@ public sealed class TaskManagerViewModel : ViewModelBase
     public ObservableCollection<TaskItem> Tasks { get; } = new();
     public ObservableCollection<TaskItem> FilteredTasks { get; } = new();
     public ObservableCollection<TaskItem> TreeTasks { get; } = new();
+    public ObservableCollection<TaskCanvasNode> CanvasTasks { get; } = new();
+    public ObservableCollection<TaskCanvasConnector> CanvasConnectors { get; } = new();
 
     public string SearchText
     {
@@ -80,6 +91,69 @@ public sealed class TaskManagerViewModel : ViewModelBase
         }
     }
 
+    public bool IsCanvasView
+    {
+        get => _isCanvasView;
+        set
+        {
+            if (SetProperty(ref _isCanvasView, value))
+            {
+                OnPropertyChanged(nameof(IsListView));
+            }
+        }
+    }
+
+    public bool IsListView => !IsCanvasView;
+
+    public TaskDiagramStyle DiagramStyle
+    {
+        get => _diagramStyle;
+        set
+        {
+            if (SetProperty(ref _diagramStyle, value))
+            {
+                OnPropertyChanged(nameof(IsReachItDiagramStyle));
+                OnPropertyChanged(nameof(IsClassicDiagramStyle));
+            }
+        }
+    }
+
+    public bool IsReachItDiagramStyle
+    {
+        get => DiagramStyle == TaskDiagramStyle.ReachIt;
+        set
+        {
+            if (value)
+            {
+                DiagramStyle = TaskDiagramStyle.ReachIt;
+            }
+        }
+    }
+
+    public bool IsClassicDiagramStyle
+    {
+        get => DiagramStyle == TaskDiagramStyle.Classic;
+        set
+        {
+            if (value)
+            {
+                DiagramStyle = TaskDiagramStyle.Classic;
+            }
+        }
+    }
+
+    public double CanvasWidth
+    {
+        get => _canvasWidth;
+        private set => SetProperty(ref _canvasWidth, value);
+    }
+
+    public double CanvasHeight
+    {
+        get => _canvasHeight;
+        private set => SetProperty(ref _canvasHeight, value);
+    }
+
     public Visibility EmptyStateVisibility => FilteredTasks.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
     public bool IsTaskSelected => SelectedTask is not null;
@@ -92,6 +166,7 @@ public sealed class TaskManagerViewModel : ViewModelBase
             if (SetProperty(ref _selectedTask, value))
             {
                 PopulateEditorFromSelection();
+                UpdateCanvasSelection();
                 RaiseCommandStates();
             }
         }
@@ -158,6 +233,9 @@ public sealed class TaskManagerViewModel : ViewModelBase
     }
 
     public ICommand AddTaskCommand { get; }
+    public ICommand SelectTaskCommand { get; }
+    public ICommand SetListViewCommand { get; }
+    public ICommand SetCanvasViewCommand { get; }
     public ICommand EditTaskCommand { get; }
     public ICommand DeleteTaskCommand { get; }
     public ICommand MarkCompletedCommand { get; }
@@ -239,7 +317,149 @@ public sealed class TaskManagerViewModel : ViewModelBase
             TreeTasks.Add(root);
         }
 
+        BuildCanvasLayout();
         OnPropertyChanged(nameof(EmptyStateVisibility));
+    }
+
+    private void BuildCanvasLayout()
+    {
+        CanvasTasks.Clear();
+        CanvasConnectors.Clear();
+
+        var taskList = FilteredTasks.ToList();
+        const double nodeWidth = 250;
+        const double nodeHeight = 104;
+        const double horizontalGap = 48;
+        const double verticalGap = 96;
+        const double leftPadding = 24;
+        const double topPadding = 24;
+
+        var taskIds = taskList.Select(x => x.Id).ToHashSet();
+        var byParent = taskList
+            .GroupBy(x => x.ParentTaskId.HasValue && taskIds.Contains(x.ParentTaskId.Value)
+                ? x.ParentTaskId.Value
+                : Guid.Empty)
+            .ToDictionary(x => x.Key, x => x
+                .OrderBy(t => t.IsCompleted)
+                .ThenBy(t => t.Priority <= 0 ? int.MaxValue : t.Priority)
+                .ThenBy(t => t.DueDateUtc ?? DateTime.MaxValue)
+                .ThenBy(t => t.Title, StringComparer.OrdinalIgnoreCase)
+                .ToList());
+
+        var projectTitle = _projectService.CurrentProject?.ProjectName;
+        if (string.IsNullOrWhiteSpace(projectTitle))
+        {
+            projectTitle = "ReachIT Project";
+        }
+
+        var root = TaskCanvasNode.CreateProject(projectTitle!, 0, topPadding, nodeWidth + 80, nodeHeight);
+        CanvasTasks.Add(root);
+
+        if (taskList.Count == 0)
+        {
+            root.Left = leftPadding;
+            CanvasWidth = 960;
+            CanvasHeight = 520;
+            UpdateCanvasSelection();
+            return;
+        }
+
+        var nodesByTask = new Dictionary<Guid, TaskCanvasNode>();
+        var visited = new HashSet<Guid>();
+        var nextLeaf = 0;
+
+        double Place(TaskItem task, int depth)
+        {
+            if (!visited.Add(task.Id))
+            {
+                return leftPadding + nextLeaf * (nodeWidth + horizontalGap);
+            }
+
+            var children = byParent.TryGetValue(task.Id, out var childList)
+                ? childList
+                : [];
+
+            double x;
+            if (children.Count == 0)
+            {
+                x = leftPadding + nextLeaf * (nodeWidth + horizontalGap);
+                nextLeaf++;
+            }
+            else
+            {
+                var childXs = children.Select(child => Place(child, depth + 1)).ToList();
+                x = childXs.Average();
+            }
+
+            var node = TaskCanvasNode.CreateTask(task, x, topPadding + (depth + 1) * (nodeHeight + verticalGap), nodeWidth, nodeHeight);
+            nodesByTask[task.Id] = node;
+            CanvasTasks.Add(node);
+            return x;
+        }
+
+        if (byParent.TryGetValue(Guid.Empty, out var roots))
+        {
+            foreach (var rootTask in roots)
+            {
+                Place(rootTask, 0);
+            }
+        }
+
+        foreach (var task in taskList.Where(x => !visited.Contains(x.Id)))
+        {
+            Place(task, 0);
+        }
+
+        foreach (var task in taskList.Where(x => x.ParentTaskId.HasValue))
+        {
+            if (!nodesByTask.TryGetValue(task.Id, out var child) ||
+                !nodesByTask.TryGetValue(task.ParentTaskId!.Value, out var parent))
+            {
+                continue;
+            }
+
+            CanvasConnectors.Add(TaskCanvasConnector.Create(parent.CenterX, parent.Bottom, child.CenterX, child.Top));
+        }
+
+        var rootChildren = taskList
+            .Where(x => !x.ParentTaskId.HasValue || !taskIds.Contains(x.ParentTaskId.Value))
+            .Where(x => nodesByTask.ContainsKey(x.Id))
+            .Select(x => nodesByTask[x.Id])
+            .ToList();
+
+        if (rootChildren.Count > 0)
+        {
+            root.Left = Math.Max(leftPadding, rootChildren.Average(x => x.CenterX) - root.Width / 2);
+            foreach (var child in rootChildren)
+            {
+                CanvasConnectors.Add(TaskCanvasConnector.Create(root.CenterX, root.Bottom, child.CenterX, child.Top));
+            }
+        }
+        else
+        {
+            root.Left = leftPadding;
+        }
+
+        CanvasWidth = Math.Max(960, CanvasTasks.Max(x => x.Right) + leftPadding);
+        CanvasHeight = Math.Max(520, CanvasTasks.Count == 0 ? 520 : CanvasTasks.Max(x => x.Top + x.Height) + topPadding);
+        UpdateCanvasSelection();
+    }
+
+    private void SelectTask(TaskItem? task)
+    {
+        if (task is not null)
+        {
+            SelectedTask = task;
+        }
+    }
+
+    private void UpdateCanvasSelection()
+    {
+        var selectedId = SelectedTask?.Id;
+        foreach (var node in CanvasTasks)
+        {
+            node.IsSelected = node.Task is not null && selectedId.HasValue && node.Task.Id == selectedId.Value;
+        }
     }
 
     private static IEnumerable<TaskItem> OrderTasksForHierarchy(IEnumerable<TaskItem> tasks)
@@ -529,4 +749,94 @@ public sealed class TaskManagerViewModel : ViewModelBase
         _deleteTaskCommand.RaiseCanExecuteChanged();
         _markCompletedCommand.RaiseCanExecuteChanged();
     }
+}
+
+public sealed class TaskCanvasNode : ViewModelBase
+{
+    private bool _isSelected;
+    private double _left;
+
+    private TaskCanvasNode(TaskItem? task, string title, string description, string status, string queuePositionText, bool isCompleted, bool isProjectRoot, double left, double top, double width, double height)
+    {
+        Task = task;
+        Title = title;
+        Description = description;
+        Status = status;
+        QueuePositionText = queuePositionText;
+        IsCompleted = isCompleted;
+        IsProjectRoot = isProjectRoot;
+        _left = left;
+        Top = top;
+        Width = width;
+        Height = height;
+    }
+
+    public static TaskCanvasNode CreateProject(string title, double left, double top, double width, double height)
+    {
+        return new TaskCanvasNode(null, title, "Project overview", "Project", string.Empty, false, true, left, top, width, height);
+    }
+
+    public static TaskCanvasNode CreateTask(TaskItem task, double left, double top, double width, double height)
+    {
+        return new TaskCanvasNode(
+            task,
+            task.Title,
+            task.Description,
+            task.Status,
+            task.QueuePositionText,
+            task.IsCompleted,
+            false,
+            left,
+            top,
+            width,
+            height);
+    }
+
+    public TaskItem? Task { get; }
+    public string Title { get; }
+    public string Description { get; }
+    public string Status { get; }
+    public string QueuePositionText { get; }
+    public bool IsCompleted { get; }
+    public bool IsProjectRoot { get; }
+    public double Left
+    {
+        get => _left;
+        set
+        {
+            if (SetProperty(ref _left, value))
+            {
+                OnPropertyChanged(nameof(Right));
+                OnPropertyChanged(nameof(CenterX));
+            }
+        }
+    }
+
+    public double Top { get; }
+    public double Width { get; }
+    public double Height { get; }
+    public double Right => Left + Width;
+    public double CenterX => Left + Width / 2;
+    public double MiddleY => Top + Height / 2;
+    public double Bottom => Top + Height;
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => SetProperty(ref _isSelected, value);
+    }
+}
+
+public sealed record TaskCanvasConnector(double X1, double Y1, double X2, double Y2, double MidY)
+{
+    public static TaskCanvasConnector Create(double x1, double y1, double x2, double y2)
+    {
+        return new TaskCanvasConnector(x1, y1, x2, y2, y1 + (y2 - y1) / 2);
+    }
+}
+
+public enum TaskDiagramStyle
+{
+    ReachIt,
+    Classic
 }

@@ -5,8 +5,9 @@
             Title="Create Project"
             Height="500"
             Width="720"
-            WindowStartupLocation="CenterOwner">
-        <Grid>
+            WindowStartupLocation="CenterOwner"
+            Background="{StaticResource ReachItWindowBackgroundBrush}">
+        <Grid Background="{StaticResource ReachItWindowBackgroundBrush}">
         <views:CreateProjectView />
     </Grid>
 </Window>

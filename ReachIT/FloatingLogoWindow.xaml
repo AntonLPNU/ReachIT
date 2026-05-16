@@ -3,8 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="ReachIT"
         Icon="Resources/AppIcon.ico"
-        Width="64"
-        Height="64"
+        Width="76"
+        Height="76"
+        MinWidth="76"
+        MinHeight="76"
+        MaxWidth="76"
+        MaxHeight="76"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -15,9 +19,9 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
     </Window.Resources>
-    <Border Width="64"
-            Height="64"
-            CornerRadius="32"
+    <Border Width="76"
+            Height="76"
+            CornerRadius="38"
             Background="#111827"
             Cursor="Hand"
             MouseLeftButtonDown="Logo_MouseLeftButtonDown"
@@ -41,9 +45,9 @@
             <DropShadowEffect BlurRadius="22" ShadowDepth="0" Opacity="0.45" Color="#020617" />
         </Border.Effect>
         <Grid>
-            <Ellipse Stroke="{StaticResource ReachItTitleBrush}" StrokeThickness="3" Margin="5" />
-            <Image Source="Resources/AppIcon.png" Width="44" Height="44" Stretch="Uniform" />
-            <Border Width="52"
+            <Ellipse Stroke="{StaticResource ReachItTitleBrush}" StrokeThickness="3" Margin="6" />
+            <Image Source="Resources/AppIcon.png" Width="52" Height="52" Stretch="Uniform" />
+            <Border Width="58"
                     Height="18"
                     CornerRadius="9"
                     Background="#D9111827"

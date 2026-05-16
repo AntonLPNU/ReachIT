@@ -681,6 +681,7 @@ public sealed class ProjectService : IProjectService
             return null;
         }
 
+        projectFolderPath = Path.GetFullPath(projectFolderPath);
         var ritPath = Path.Combine(projectFolderPath, ".reachit.json");
         var meta = await LoadProjectMetaFromRitAsync(ritPath, projectFolderPath, cancellationToken).ConfigureAwait(false);
         if (meta is null)
@@ -783,7 +784,7 @@ public sealed class ProjectService : IProjectService
         var fallback = new ProjectMeta
         {
             Id = Guid.NewGuid(),
-            ProjectName = Path.GetFileName(projectFolderPath),
+            ProjectName = SafeProjectNameFromPath(projectFolderPath),
             ProjectDirectoryPath = projectFolderPath,
             RitFilePath = ritFilePath,
             CreatedAtUtc = DateTime.UtcNow,
@@ -796,8 +797,23 @@ public sealed class ProjectService : IProjectService
 
     private async Task SaveRitFileAsync(ProjectMeta meta, CancellationToken cancellationToken)
     {
+        var directory = Path.GetDirectoryName(meta.RitFilePath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
         var payload = JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(meta.RitFilePath, payload, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string SafeProjectNameFromPath(string projectFolderPath)
+    {
+        var fullPath = Path.GetFullPath(projectFolderPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var name = Path.GetFileName(fullPath);
+        return string.IsNullOrWhiteSpace(name)
+            ? "ReachIT Project"
+            : name;
     }
 
     private async Task UpsertProjectMetaAsync(ProjectMeta meta, CancellationToken cancellationToken)

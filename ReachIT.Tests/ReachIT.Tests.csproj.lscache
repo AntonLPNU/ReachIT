@@ -345,6 +345,14 @@ StartupAndLoggingTests.cs
  moq/4.20.72/lib/net6.0/Moq.dll
  newtonsoft.json/13.0.1/lib/netstandard2.0/Newtonsoft.Json.dll
  nuget.frameworks/5.11.0/lib/netstandard2.0/NuGet.Frameworks.dll
+ sharpvectors.wpf/1.8.5/lib/net8.0-windows7.0/
+  SharpVectors.Converters.Wpf.dll
+  SharpVectors.Core.dll
+  SharpVectors.Css.dll
+  SharpVectors.Dom.dll
+  SharpVectors.Model.dll
+  SharpVectors.Rendering.Wpf.dll
+  SharpVectors.Runtime.Wpf.dll
  sqlitepclraw.bundle_e_sqlite3/2.1.6/lib/netstandard2.0/SQLitePCLRaw.batteries_v2.dll
  sqlitepclraw.core/2.1.6/lib/netstandard2.0/SQLitePCLRaw.core.dll
  sqlitepclraw.provider.e_sqlite3/2.1.6/lib/net6.0-windows7.0/SQLitePCLRaw.provider.e_sqlite3.dll

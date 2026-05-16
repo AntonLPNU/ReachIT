@@ -7,6 +7,7 @@ namespace ReachIT;
 public partial class FocusWarningWindow : Window
 {
     public event EventHandler? StopFocusRequested;
+    public event EventHandler? AllowPageOnceRequested;
     public event EventHandler<string>? AllowAppRequested;
     private string _processName = string.Empty;
 
@@ -66,6 +67,12 @@ public partial class FocusWarningWindow : Window
 
         Hide();
         AllowAppRequested?.Invoke(this, _processName);
+    }
+
+    private void AllowPageOnceButton_Click(object sender, RoutedEventArgs e)
+    {
+        Hide();
+        AllowPageOnceRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void StopFocusButton_Click(object sender, RoutedEventArgs e)

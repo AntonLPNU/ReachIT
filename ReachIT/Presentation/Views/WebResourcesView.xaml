@@ -1,0 +1,181 @@
+<!-- Project browser resources: saved links, metadata, and focus-host profile. -->
+<UserControl x:Class="ReachIT.Presentation.Views.WebResourcesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel>
+                <TextBlock Text="Web Resources" Style="{StaticResource ReachItPageTitleTextStyle}" FontSize="24" />
+                <TextBlock Text="{Binding StatusText}" Style="{StaticResource ReachItMutedTextStyle}" Margin="0,2,0,0" />
+            </StackPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Command="{Binding AddUrlCommand}" ToolTip="Add a web page to this project.">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="LinkPlus" Width="16" Height="16" Margin="0,0,8,0" />
+                        <TextBlock Text="Add URL" />
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding RefreshCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Reload web resources.">
+                    <iconPacks:PackIconMaterial Kind="Refresh" Width="16" Height="16" />
+                </Button>
+            </StackPanel>
+        </DockPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.95*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="1.25*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource ReachItCardStyle}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                        <TextBlock Text="Project Links" Style="{StaticResource ReachItSectionTitleTextStyle}" />
+                        <TextBlock Text="Stored under Web Resources as ReachIT link metadata."
+                                   Style="{StaticResource ReachItMutedTextStyle}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <ItemsControl DockPanel.Dock="Bottom" ItemsSource="{Binding FocusHosts}" Margin="0,12,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#10243D"
+                                        BorderBrush="#2D4C72"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="8,4"
+                                        Margin="0,0,6,6">
+                                    <TextBlock Text="{Binding}" FontSize="12" Foreground="{StaticResource ReachItTitleBrush}" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ListBox ItemsSource="{Binding Resources}"
+                             SelectedItem="{Binding SelectedResource, Mode=TwoWay}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="10"
+                                        Margin="0,0,0,8"
+                                        CornerRadius="8"
+                                        Background="#101B2D"
+                                        BorderBrush="#263A5C"
+                                        BorderThickness="1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Width="34"
+                                                Height="34"
+                                                CornerRadius="8"
+                                                Background="#0B6B6C"
+                                                Margin="0,0,10,0">
+                                            <iconPacks:PackIconMaterial Kind="Web" Width="20" Height="20" Foreground="#F3FAFF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Host}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="12" />
+                                            <TextBlock Text="{Binding ReadingProgress}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource ReachItCardStyle}">
+                <DockPanel>
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                        <Button Command="{Binding OpenCommand}" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="OpenInNew" Width="16" Height="16" Margin="0,0,8,0" />
+                                <TextBlock Text="Open URL" />
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding SaveCommand}"
+                                Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="ContentSave" Width="16" Height="16" Margin="0,0,8,0" />
+                                <TextBlock Text="Save" />
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding CreateReadingTaskCommand}"
+                                Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="ClipboardPlus" Width="16" Height="16" Margin="0,0,8,0" />
+                                <TextBlock Text="Reading task" />
+                            </StackPanel>
+                        </Button>
+                    </WrapPanel>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <Grid Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="170" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="Title" Grid.Row="0" Grid.Column="0" Margin="0,0,12,10" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" Grid.Row="0" Grid.Column="1" Margin="0,0,0,10" />
+
+                            <TextBlock Text="Primary URL" Grid.Row="1" Grid.Column="0" Margin="0,0,12,10" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding PrimaryUrl, UpdateSourceTrigger=PropertyChanged}" Grid.Row="1" Grid.Column="1" Margin="0,0,0,10" />
+
+                            <TextBlock Text="Alternate URLs" Grid.Row="2" Grid.Column="0" Margin="0,0,12,10" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding AlternateUrlsText, UpdateSourceTrigger=PropertyChanged}" Grid.Row="2" Grid.Column="1" MinHeight="74" Margin="0,0,0,10" AcceptsReturn="True" TextWrapping="Wrap" />
+
+                            <TextBlock Text="Focus hosts" Grid.Row="3" Grid.Column="0" Margin="0,0,12,10" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding AllowedFocusHostsText, UpdateSourceTrigger=PropertyChanged}" Grid.Row="3" Grid.Column="1" MinHeight="74" Margin="0,0,0,10" AcceptsReturn="True" TextWrapping="Wrap" />
+
+                            <TextBlock Text="Reading progress" Grid.Row="4" Grid.Column="0" Margin="0,0,12,10" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding ReadingProgress, UpdateSourceTrigger=PropertyChanged}" Grid.Row="4" Grid.Column="1" Margin="0,0,0,10" />
+
+                            <TextBlock Text="Last marker" Grid.Row="5" Grid.Column="0" Margin="0,0,12,10" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding LastReadMarker, UpdateSourceTrigger=PropertyChanged}" Grid.Row="5" Grid.Column="1" Margin="0,0,0,10" />
+
+                            <TextBlock Text="Highlights" Grid.Row="6" Grid.Column="0" Margin="0,0,12,10" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding HighlightsText, UpdateSourceTrigger=PropertyChanged}" Grid.Row="6" Grid.Column="1" MinHeight="100" Margin="0,0,0,10" AcceptsReturn="True" TextWrapping="Wrap" />
+
+                            <TextBlock Text="Notes" Grid.Row="7" Grid.Column="0" Margin="0,0,12,0" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" Grid.Row="7" Grid.Column="1" MinHeight="130" AcceptsReturn="True" TextWrapping="Wrap" />
+                        </Grid>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -17,4 +17,5 @@ public interface IFocusModeService
     Task PauseAsync(CancellationToken cancellationToken = default);
     Task StopAsync(CancellationToken cancellationToken = default);
     Task<FocusSession?> GetCurrentSessionAsync(CancellationToken cancellationToken = default);
+    void AllowBrowserUrlOnce(string url);
 }

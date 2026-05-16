@@ -192,6 +192,44 @@
                         </Button>
                     </DockPanel>
 
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+                        <Button DockPanel.Dock="Right"
+                                Command="{Binding RefreshWebFocusHostsCommand}"
+                                Style="{StaticResource ReachItIconButtonStyle}"
+                                ToolTip="Reload allowed hosts from project Web Resources.">
+                            <iconPacks:PackIconMaterial Kind="Refresh" Width="16" Height="16" />
+                        </Button>
+                        <StackPanel>
+                            <TextBlock Text="Project Web Focus" Style="{StaticResource ReachItLabelTextStyle}" />
+                            <TextBlock Text="{Binding ProjectWebFocusSummary}"
+                                       Style="{StaticResource ReachItMutedTextStyle}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,2,0,6" />
+                            <ItemsControl ItemsSource="{Binding ProjectWebFocusHosts}"
+                                          Visibility="{Binding HasProjectWebFocusHosts, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#10243D"
+                                                BorderBrush="#2D4C72"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="8,4"
+                                                Margin="0,0,6,6">
+                                            <TextBlock Text="{Binding}"
+                                                       Foreground="{StaticResource ReachItTitleBrush}"
+                                                       FontSize="12" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DockPanel>
+
                     <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />

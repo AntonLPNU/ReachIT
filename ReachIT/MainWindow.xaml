@@ -28,6 +28,7 @@
 
         <Menu Grid.Row="0">
             <MenuItem Header="{DynamicResource Menu.File}">
+                <MenuItem Header="{DynamicResource Menu.CreateProject}" Command="{Binding CreateProjectCommand}" />
                 <MenuItem Header="{DynamicResource Menu.OpenProjectFolder}" Command="{Binding OpenProjectCommand}" />
                 <MenuItem Header="{DynamicResource Menu.CloseProject}" Command="{Binding CloseProjectCommand}" />
                 <Separator />
@@ -39,9 +40,12 @@
                 <MenuItem Header="{DynamicResource Menu.ControlCenter}" Command="{Binding OpenMainViewCommand}" />
                 <MenuItem Header="{DynamicResource Menu.Activity}" Command="{Binding OpenActivityCommand}" />
                 <MenuItem Header="{DynamicResource Menu.Statistics}" Command="{Binding OpenStatisticsCommand}" />
+                <MenuItem Header="Web Resources" Command="{Binding OpenWebResourcesCommand}" />
+                <MenuItem Header="Документація" Command="{Binding OpenDocumentationCommand}" />
                 <MenuItem Header="{DynamicResource Menu.Settings}" Command="{Binding OpenSettingsCommand}" />
             </MenuItem>
-            <MenuItem Header="{DynamicResource Menu.Developer}">
+            <MenuItem Header="{DynamicResource Menu.Developer}"
+                      Visibility="{Binding IsDeveloperToolsAvailable, Converter={StaticResource BoolToVisibilityConverter}}">
                 <MenuItem Header="{DynamicResource Menu.TestPanel}" Command="{Binding OpenDeveloperTestPanelCommand}" />
             </MenuItem>
             <MenuItem Header="{DynamicResource Menu.Focus}">
@@ -71,8 +75,17 @@
                     <Button Command="{Binding CloseProjectCommand}" Style="{StaticResource ReachItIconButtonStyle}" ToolTip="{DynamicResource Main.CloseProjectTip}">
                         <iconPacks:PackIconMaterial Kind="Home" Width="20" Height="20" />
                     </Button>
-                    <Button Command="{Binding OpenDeveloperTestPanelCommand}" Style="{StaticResource ReachItIconButtonStyle}" ToolTip="{DynamicResource Main.DeveloperTestPanelTip}">
+                    <Button Command="{Binding OpenDeveloperTestPanelCommand}"
+                            Style="{StaticResource ReachItIconButtonStyle}"
+                            ToolTip="{DynamicResource Main.DeveloperTestPanelTip}"
+                            Visibility="{Binding IsDeveloperToolsAvailable, Converter={StaticResource BoolToVisibilityConverter}}">
                         <iconPacks:PackIconMaterial Kind="Flask" Width="20" Height="20" />
+                    </Button>
+                    <Button Command="{Binding OpenDocumentationCommand}" Style="{StaticResource ReachItIconButtonStyle}" ToolTip="Документація ReachIT">
+                        <iconPacks:PackIconMaterial Kind="HelpCircle" Width="20" Height="20" />
+                    </Button>
+                    <Button Command="{Binding OpenWebResourcesCommand}" Style="{StaticResource ReachItIconButtonStyle}" ToolTip="Web Resources">
+                        <iconPacks:PackIconMaterial Kind="Web" Width="20" Height="20" />
                     </Button>
                     <Border BorderBrush="{StaticResource ReachItBorderBrush}"
                             BorderThickness="1"

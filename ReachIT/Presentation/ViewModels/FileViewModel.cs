@@ -1,11 +1,13 @@
 // File workspace view model with metadata and safe preview logic.
 using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
 using System.Collections.ObjectModel;
 using Microsoft.VisualBasic;
 using ReachIT.Application.Contracts;
+using ReachIT.Application.Security;
 using ReachIT.Domain.Models;
 using ReachIT.Presentation.Commands;
 
@@ -33,10 +35,22 @@ public sealed class FileViewModel : ViewModelBase
     private string _imagePath = string.Empty;
     private bool _canPreviewAsText;
     private bool _canPreviewAsImage;
+    private bool _canPreviewAsArchive;
+    private bool _canPreviewAsAudio;
+    private bool _canPreviewAsModel;
     private string _errorMessage = string.Empty;
     private string _attachedTasksSummary = "No attached tasks";
     private bool _hasAttachedTasks;
     private TaskItem? _selectedAttachedTask;
+    private bool _isWebResource;
+    private string _webTitle = string.Empty;
+    private string _webPrimaryUrl = string.Empty;
+    private string _webAlternateUrlsText = string.Empty;
+    private string _webAllowedFocusHostsText = string.Empty;
+    private string _webReadingProgress = string.Empty;
+    private string _webLastReadMarker = string.Empty;
+    private string _webHighlightsText = string.Empty;
+    private string _webNotes = string.Empty;
 
     public FileViewModel(
         IProjectService projectService,
@@ -48,6 +62,8 @@ public sealed class FileViewModel : ViewModelBase
         _fileInspectionService = fileInspectionService;
 
         OpenFileCommand = new RelayCommand(_ => OpenFile());
+        OpenWebResourceCommand = new RelayCommand(_ => OpenWebResource());
+        SaveWebResourceCommand = new AsyncCommand(_ => SaveWebResourceAsync());
         RevealInExplorerCommand = new RelayCommand(_ => RevealInExplorer());
         CreateSnapshotCommand = new RelayCommand(_ =>
         {
@@ -171,6 +187,24 @@ public sealed class FileViewModel : ViewModelBase
         set => SetProperty(ref _canPreviewAsImage, value);
     }
 
+    public bool CanPreviewAsArchive
+    {
+        get => _canPreviewAsArchive;
+        set => SetProperty(ref _canPreviewAsArchive, value);
+    }
+
+    public bool CanPreviewAsAudio
+    {
+        get => _canPreviewAsAudio;
+        set => SetProperty(ref _canPreviewAsAudio, value);
+    }
+
+    public bool CanPreviewAsModel
+    {
+        get => _canPreviewAsModel;
+        set => SetProperty(ref _canPreviewAsModel, value);
+    }
+
     public string ErrorMessage
     {
         get => _errorMessage;
@@ -198,9 +232,73 @@ public sealed class FileViewModel : ViewModelBase
     public ObservableCollection<TaskItem> AttachedTasks { get; } = [];
 
     public ICommand OpenFileCommand { get; }
+    public ICommand OpenWebResourceCommand { get; }
+    public ICommand SaveWebResourceCommand { get; }
     public ICommand RevealInExplorerCommand { get; }
     public ICommand CreateSnapshotCommand { get; }
     public ICommand AttachTaskCommand { get; }
+
+    public bool IsWebResource
+    {
+        get => _isWebResource;
+        set
+        {
+            if (SetProperty(ref _isWebResource, value))
+            {
+                OnPropertyChanged(nameof(IsRegularFile));
+            }
+        }
+    }
+
+    public bool IsRegularFile => !IsWebResource;
+
+    public string WebTitle
+    {
+        get => _webTitle;
+        set => SetProperty(ref _webTitle, value);
+    }
+
+    public string WebPrimaryUrl
+    {
+        get => _webPrimaryUrl;
+        set => SetProperty(ref _webPrimaryUrl, value);
+    }
+
+    public string WebAlternateUrlsText
+    {
+        get => _webAlternateUrlsText;
+        set => SetProperty(ref _webAlternateUrlsText, value);
+    }
+
+    public string WebAllowedFocusHostsText
+    {
+        get => _webAllowedFocusHostsText;
+        set => SetProperty(ref _webAllowedFocusHostsText, value);
+    }
+
+    public string WebReadingProgress
+    {
+        get => _webReadingProgress;
+        set => SetProperty(ref _webReadingProgress, value);
+    }
+
+    public string WebLastReadMarker
+    {
+        get => _webLastReadMarker;
+        set => SetProperty(ref _webLastReadMarker, value);
+    }
+
+    public string WebHighlightsText
+    {
+        get => _webHighlightsText;
+        set => SetProperty(ref _webHighlightsText, value);
+    }
+
+    public string WebNotes
+    {
+        get => _webNotes;
+        set => SetProperty(ref _webNotes, value);
+    }
 
     private async Task LoadSelectedFileAsync(string selectedPath)
     {
@@ -253,12 +351,21 @@ public sealed class FileViewModel : ViewModelBase
         CreatedAtText = fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss");
         LastModifiedText = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss");
 
+        if (IsWebResourceLinkFile(fullPath))
+        {
+            await LoadWebResourceAsync(fullPath).ConfigureAwait(true);
+            return;
+        }
+
         var inspection = await _fileInspectionService.InspectAsync(fullPath).ConfigureAwait(true);
         FileKind = inspection.FileKind;
         ReadCapability = inspection.ReadCapability;
         TextPreview = inspection.PreviewText;
         CanPreviewAsText = inspection.HasTextPreview;
         CanPreviewAsImage = inspection.HasImagePreview;
+        CanPreviewAsArchive = inspection.HasArchivePreview;
+        CanPreviewAsAudio = inspection.HasAudioPreview;
+        CanPreviewAsModel = inspection.HasModelPreview;
         ImagePath = inspection.HasImagePreview ? fullPath : string.Empty;
         ErrorMessage = inspection.Message;
     }
@@ -273,6 +380,32 @@ public sealed class FileViewModel : ViewModelBase
         Process.Start(new ProcessStartInfo
         {
             FileName = FullPath,
+            UseShellExecute = true
+        });
+    }
+
+    private void OpenWebResource()
+    {
+        var target = WebPrimaryUrl;
+        if (string.IsNullOrWhiteSpace(target))
+        {
+            return;
+        }
+
+        try
+        {
+            target = WebResourceSecurity.NormalizeAndValidateUrl(target);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Blocked unsafe URL: {ex.Message}";
+            MessageBox.Show(ErrorMessage, "ReachIT Security", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = target,
             UseShellExecute = true
         });
     }
@@ -310,6 +443,111 @@ public sealed class FileViewModel : ViewModelBase
         AttachedTasksSummary = "No attached tasks";
         HasAttachedTasks = false;
         SelectedAttachedTask = null;
+        ResetWebResourceState();
+    }
+
+    private async Task LoadWebResourceAsync(string fullPath)
+    {
+        IsWebResource = true;
+        FileKind = "ReachIT web resource";
+        ReadCapability = "Editable metadata";
+        CanPreviewAsText = false;
+        CanPreviewAsImage = false;
+        CanPreviewAsArchive = false;
+        CanPreviewAsAudio = false;
+        CanPreviewAsModel = false;
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(fullPath).ConfigureAwait(true);
+            var metadata = JsonSerializer.Deserialize<WebResourceLinkMetadata>(
+                json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new WebResourceLinkMetadata();
+
+            WebTitle = string.IsNullOrWhiteSpace(metadata.Title)
+                ? Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(fullPath))
+                : metadata.Title;
+            WebPrimaryUrl = metadata.PrimaryUrl;
+            WebAlternateUrlsText = ToLines(metadata.AlternateUrls);
+            WebAllowedFocusHostsText = ToLines(metadata.AllowedFocusHosts);
+            WebReadingProgress = metadata.ReadingProgress;
+            WebLastReadMarker = metadata.LastReadMarker;
+            WebHighlightsText = ToLines(metadata.Highlights);
+            WebNotes = metadata.Notes;
+            FileName = WebTitle;
+            ErrorMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not read web resource metadata: {ex.Message}";
+        }
+    }
+
+    private async Task SaveWebResourceAsync()
+    {
+        if (!IsWebResource || !Exists || string.IsNullOrWhiteSpace(FullPath))
+        {
+            return;
+        }
+
+        WebResourceLinkMetadata metadata;
+        try
+        {
+            metadata = new WebResourceLinkMetadata
+            {
+                Title = WebTitle.Trim(),
+                PrimaryUrl = WebResourceSecurity.NormalizeAndValidateUrl(WebPrimaryUrl),
+                AlternateUrls = WebResourceSecurity.NormalizeAndValidateUrls(FromLines(WebAlternateUrlsText)),
+                AllowedFocusHosts = WebResourceSecurity.NormalizeAndValidateHosts(FromLines(WebAllowedFocusHostsText)),
+                ReadingProgress = WebReadingProgress.Trim(),
+                LastReadMarker = WebLastReadMarker.Trim(),
+                Highlights = FromLines(WebHighlightsText),
+                Notes = WebNotes.Trim(),
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Blocked unsafe web resource metadata: {ex.Message}";
+            MessageBox.Show(ErrorMessage, "ReachIT Security", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (File.Exists(FullPath))
+        {
+            try
+            {
+                var existingJson = await File.ReadAllTextAsync(FullPath).ConfigureAwait(true);
+                var existing = JsonSerializer.Deserialize<WebResourceLinkMetadata>(
+                    existingJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (existing is not null)
+                {
+                    metadata.CreatedAtUtc = existing.CreatedAtUtc;
+                }
+            }
+            catch
+            {
+                // Keep saving available even if the old sidecar is malformed.
+            }
+        }
+
+        var json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(FullPath, json).ConfigureAwait(true);
+        ErrorMessage = "Web resource metadata saved.";
+    }
+
+    private void ResetWebResourceState()
+    {
+        IsWebResource = false;
+        WebTitle = string.Empty;
+        WebPrimaryUrl = string.Empty;
+        WebAlternateUrlsText = string.Empty;
+        WebAllowedFocusHostsText = string.Empty;
+        WebReadingProgress = string.Empty;
+        WebLastReadMarker = string.Empty;
+        WebHighlightsText = string.Empty;
+        WebNotes = string.Empty;
     }
 
     private async Task AttachTaskAsync()
@@ -401,5 +639,26 @@ public sealed class FileViewModel : ViewModelBase
         var normalizedTarget = Path.GetFullPath(targetPath);
         return normalizedTarget.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase)
                || string.Equals(rootPath.TrimEnd(Path.DirectorySeparatorChar), normalizedTarget.TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsWebResourceLinkFile(string fullPath)
+    {
+        var fileName = Path.GetFileName(fullPath);
+        return fileName.EndsWith(".reachit-link.json", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ToLines(IEnumerable<string> values)
+    {
+        return string.Join(Environment.NewLine, values.Where(value => !string.IsNullOrWhiteSpace(value)));
+    }
+
+    private static List<string> FromLines(string value)
+    {
+        return value
+            .Split([Environment.NewLine, "\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(line => line.Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }

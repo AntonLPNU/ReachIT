@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="ReachIT Quick Actions"
         Icon="Resources/AppIcon.ico"
-        Width="320"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        Width="244"
         SizeToContent="Height"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -11,129 +12,123 @@
         ResizeMode="NoResize"
         Topmost="True"
         ShowActivated="False"
-        ShowInTaskbar="False"
-        Deactivated="Window_Deactivated">
+        ShowInTaskbar="False">
     <Window.Resources>
-        <Style x:Key="QuickActionButtonStyle"
-               BasedOn="{StaticResource ReachItSecondaryButtonStyle}"
-               TargetType="{x:Type Button}">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Padding" Value="12,9" />
-            <Setter Property="Margin" Value="0,0,0,7" />
+        <Style x:Key="QuickTileStyle" BasedOn="{StaticResource ReachItSecondaryButtonStyle}" TargetType="{x:Type Button}">
+            <Setter Property="Width" Value="66" />
+            <Setter Property="Height" Value="58" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="MarkerButtonStyle" BasedOn="{StaticResource ReachItSecondaryButtonStyle}" TargetType="{x:Type Button}">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,6,6" />
         </Style>
     </Window.Resources>
 
-    <Border Style="{StaticResource ReachItCardStyle}" Padding="12" CornerRadius="14">
+    <Border Style="{StaticResource ReachItCardStyle}" Padding="10" CornerRadius="14">
         <StackPanel>
-            <StackPanel Margin="4,2,4,10"
-                        Cursor="SizeAll"
-                        MouseLeftButtonDown="TitleArea_MouseLeftButtonDown"
-                        ToolTip="Drag to move quick actions.">
-                <TextBlock Text="ReachIT Actions" Style="{StaticResource ReachItSectionTitleTextStyle}" Margin="0" />
-                <TextBlock Text="Click or double-click the floating logo to open this menu."
+            <DockPanel Margin="2,0,2,8"
+                       Cursor="SizeAll"
+                       MouseLeftButtonDown="TitleArea_MouseLeftButtonDown"
+                       ToolTip="Drag to move quick actions.">
+                <TextBlock Text="ReachIT"
+                           Foreground="{StaticResource SkyAquaBrush}"
+                           FontSize="16"
+                           FontWeight="Bold" />
+                <TextBlock DockPanel.Dock="Right"
+                           Text="Quick"
                            Style="{StaticResource ReachItMutedTextStyle}"
-                           FontSize="12" />
-            </StackPanel>
+                           VerticalAlignment="Center" />
+            </DockPanel>
 
             <Button Command="{Binding NewTaskCommand}"
+                    Height="44"
+                    Padding="10,4"
+                    Margin="0,0,0,8"
                     ToolTip="Create a compact task without opening the main window. Hotkey: Ctrl+Alt+T">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock Text="+ New Task" FontWeight="SemiBold" />
-                        <TextBlock Text="Quickly capture a task." Style="{StaticResource ReachItMutedTextStyle}" FontSize="12" />
-                    </StackPanel>
-                    <TextBlock Grid.Column="1" Text="Ctrl+Alt+T" Style="{StaticResource ReachItMutedTextStyle}" VerticalAlignment="Center" />
-                </Grid>
-            </Button>
-
-            <Button Command="{Binding ProjectExplorerCommand}"
-                    Style="{StaticResource QuickActionButtonStyle}"
-                    ToolTip="Open the lightweight project tree and file actions.">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock Text="[ ] Project Explorer" FontWeight="SemiBold" />
-                        <TextBlock Text="Files, folders, rename, delete, open." Style="{StaticResource ReachItMutedTextStyle}" FontSize="12" />
-                    </StackPanel>
-                    <TextBlock Grid.Column="1" Text="Panel" Style="{StaticResource ReachItMutedTextStyle}" VerticalAlignment="Center" />
-                </Grid>
-            </Button>
-
-            <Button Command="{Binding FocusModeCommand}"
-                    Style="{StaticResource QuickActionButtonStyle}"
-                    ToolTip="Start or stop focus mode. Hotkey: Ctrl+Alt+F">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock Text="( ) Focus Mode" FontWeight="SemiBold" />
-                        <TextBlock Text="Toggle distraction tracking." Style="{StaticResource ReachItMutedTextStyle}" FontSize="12" />
-                    </StackPanel>
-                    <TextBlock Grid.Column="1" Text="Ctrl+Alt+F" Style="{StaticResource ReachItMutedTextStyle}" VerticalAlignment="Center" />
-                </Grid>
-            </Button>
-
-            <Button Command="{Binding StatisticsCommand}" Style="{StaticResource QuickActionButtonStyle}" ToolTip="Open productivity statistics in the control center.">
-                <StackPanel>
-                    <TextBlock Text="# Statistics" FontWeight="SemiBold" />
-                    <TextBlock Text="Focus time, task progress, productivity." Style="{StaticResource ReachItMutedTextStyle}" FontSize="12" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <iconPacks:PackIconMaterial Kind="ClipboardPlus" Width="18" Height="18" Margin="0,0,8,0" />
+                    <TextBlock Text="New Task" FontWeight="SemiBold" />
                 </StackPanel>
             </Button>
 
-            <Button Command="{Binding MainWindowCommand}"
-                    Style="{StaticResource QuickActionButtonStyle}"
-                    ToolTip="Open the ReachIT control center. Hotkey: Ctrl+Alt+M">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+            <UniformGrid Columns="3">
+                <Button Command="{Binding ProjectExplorerCommand}" Style="{StaticResource QuickTileStyle}" ToolTip="Project explorer.">
                     <StackPanel>
-                        <TextBlock Text="-> Main Window" FontWeight="SemiBold" />
-                        <TextBlock Text="Open the control center." Style="{StaticResource ReachItMutedTextStyle}" FontSize="12" />
+                        <iconPacks:PackIconMaterial Kind="FileTree" Width="20" Height="20" HorizontalAlignment="Center" />
+                        <TextBlock Text="Files" FontSize="11" HorizontalAlignment="Center" />
                     </StackPanel>
-                    <TextBlock Grid.Column="1" Text="Ctrl+Alt+M" Style="{StaticResource ReachItMutedTextStyle}" VerticalAlignment="Center" />
-                </Grid>
-            </Button>
-
-            <Button Command="{Binding SettingsCommand}" Style="{StaticResource QuickActionButtonStyle}" ToolTip="Open settings and preferences.">
-                <StackPanel>
-                    <TextBlock Text="* Settings" FontWeight="SemiBold" />
-                    <TextBlock Text="Theme, hotkeys, startup behavior." Style="{StaticResource ReachItMutedTextStyle}" FontSize="12" />
-                </StackPanel>
-            </Button>
-
-            <Button Command="{Binding HideCommand}"
-                    Style="{StaticResource QuickActionButtonStyle}"
-                    ToolTip="Hide the floating logo into the tray. Hotkey: Ctrl+Alt+R toggles it back.">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                </Button>
+                <Button Command="{Binding FocusModeCommand}" Style="{StaticResource QuickTileStyle}" ToolTip="Toggle focus mode.">
                     <StackPanel>
-                        <TextBlock Text="- Hide" FontWeight="SemiBold" />
-                        <TextBlock Text="Keep ReachIT running in tray." Style="{StaticResource ReachItMutedTextStyle}" FontSize="12" />
+                        <iconPacks:PackIconMaterial Kind="ShieldCheck" Width="20" Height="20" HorizontalAlignment="Center" />
+                        <TextBlock Text="Focus" FontSize="11" HorizontalAlignment="Center" />
                     </StackPanel>
-                    <TextBlock Grid.Column="1" Text="Ctrl+Alt+R" Style="{StaticResource ReachItMutedTextStyle}" VerticalAlignment="Center" />
-                </Grid>
-            </Button>
+                </Button>
+                <Button Command="{Binding WebResourcesCommand}" Style="{StaticResource QuickTileStyle}" ToolTip="Open Web Resources.">
+                    <StackPanel>
+                        <iconPacks:PackIconMaterial Kind="Web" Width="20" Height="20" HorizontalAlignment="Center" />
+                        <TextBlock Text="Web" FontSize="11" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding AddCurrentSiteCommand}" Style="{StaticResource QuickTileStyle}" ToolTip="Add URL from clipboard, or paste a URL.">
+                    <StackPanel>
+                        <iconPacks:PackIconMaterial Kind="LinkPlus" Width="20" Height="20" HorizontalAlignment="Center" />
+                        <TextBlock Text="Site" FontSize="11" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding StatisticsCommand}" Style="{StaticResource QuickTileStyle}" ToolTip="Statistics.">
+                    <StackPanel>
+                        <iconPacks:PackIconMaterial Kind="ChartTimelineVariant" Width="20" Height="20" HorizontalAlignment="Center" />
+                        <TextBlock Text="Stats" FontSize="11" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding MainWindowCommand}" Style="{StaticResource QuickTileStyle}" ToolTip="Main window.">
+                    <StackPanel>
+                        <iconPacks:PackIconMaterial Kind="ViewDashboard" Width="20" Height="20" HorizontalAlignment="Center" />
+                        <TextBlock Text="Main" FontSize="11" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </UniformGrid>
 
-            <Button Command="{Binding ExitCommand}" Style="{StaticResource ReachItDangerButtonStyle}" ToolTip="Fully close ReachIT and remove tray/hotkeys.">
-                <StackPanel>
-                    <TextBlock Text="x Exit" FontWeight="SemiBold" />
-                    <TextBlock Text="Completely close the app." Foreground="#FFE2EE" FontSize="12" />
-                </StackPanel>
-            </Button>
+            <TextBlock Text="Highlight copied text"
+                       Style="{StaticResource ReachItMutedTextStyle}"
+                       FontSize="11"
+                       Margin="2,3,0,5" />
+            <WrapPanel>
+                <Button Command="{Binding HighlightCommand}" CommandParameter="yellow" Style="{StaticResource MarkerButtonStyle}" ToolTip="Save copied text as yellow highlight.">
+                    <Border Width="26" Height="10" CornerRadius="5" Background="#FFD54A" />
+                </Button>
+                <Button Command="{Binding HighlightCommand}" CommandParameter="green" Style="{StaticResource MarkerButtonStyle}" ToolTip="Save copied text as green highlight.">
+                    <Border Width="26" Height="10" CornerRadius="5" Background="#5BE48A" />
+                </Button>
+                <Button Command="{Binding HighlightCommand}" CommandParameter="pink" Style="{StaticResource MarkerButtonStyle}" ToolTip="Save copied text as pink highlight.">
+                    <Border Width="26" Height="10" CornerRadius="5" Background="#EF2A97" />
+                </Button>
+                <Button Command="{Binding HighlightCommand}" CommandParameter="blue" Style="{StaticResource MarkerButtonStyle}" ToolTip="Save copied text as blue highlight.">
+                    <Border Width="26" Height="10" CornerRadius="5" Background="#4DDCFF" />
+                </Button>
+            </WrapPanel>
+
+            <WrapPanel>
+                <Button Command="{Binding SettingsCommand}" Style="{StaticResource ReachItIconButtonStyle}" ToolTip="Settings.">
+                    <iconPacks:PackIconMaterial Kind="Cog" Width="18" Height="18" />
+                </Button>
+                <Button Command="{Binding HideCommand}" Style="{StaticResource ReachItIconButtonStyle}" ToolTip="Hide floating logo.">
+                    <iconPacks:PackIconMaterial Kind="EyeOff" Width="18" Height="18" />
+                </Button>
+                <Button Command="{Binding ExitCommand}" Style="{StaticResource ReachItDangerIconButtonStyle}" ToolTip="Exit ReachIT.">
+                    <iconPacks:PackIconMaterial Kind="Power" Width="18" Height="18" />
+                </Button>
+            </WrapPanel>
         </StackPanel>
     </Border>
 </Window>

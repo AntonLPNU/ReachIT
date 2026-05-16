@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -11,7 +12,9 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using ReachIT.Application.Contracts;
+using ReachIT.Application.Security;
 using ReachIT.Domain.Enums;
+using ReachIT.Domain.Models;
 using ReachIT.Presentation.Commands;
 
 namespace ReachIT.Presentation.ViewModels;
@@ -22,6 +25,8 @@ public sealed class FocusModeViewModel : ViewModelBase, IDisposable
     private readonly IOverlayService _overlayService;
     private readonly IAppSettingsService _settingsService;
     private readonly IForegroundWindowService _foregroundWindowService;
+    private readonly IProjectService _projectService;
+    private readonly IActiveBrowserUrlService _activeBrowserUrlService;
     private FocusModeType _selectedMode = FocusModeType.Strict;
     private bool _isActive;
     private string _sessionDurationText = "00:00:00";
@@ -30,23 +35,30 @@ public sealed class FocusModeViewModel : ViewModelBase, IDisposable
     private string _applicationSearchText = string.Empty;
     private string _selectedApplicationDetails = "Select an app to inspect its process details.";
     private string _focusStatusText = "Focus mode is off";
+    private string _projectWebFocusSummary = "No project web resources detected.";
+    private bool _hasProjectWebFocusHosts;
     private readonly DispatcherTimer _timer;
 
     public FocusModeViewModel(
         IFocusModeService focusModeService,
         IOverlayService overlayService,
         IAppSettingsService settingsService,
-        IForegroundWindowService foregroundWindowService)
+        IForegroundWindowService foregroundWindowService,
+        IProjectService projectService,
+        IActiveBrowserUrlService activeBrowserUrlService)
     {
         _focusModeService = focusModeService;
         _overlayService = overlayService;
         _settingsService = settingsService;
         _foregroundWindowService = foregroundWindowService;
+        _projectService = projectService;
+        _activeBrowserUrlService = activeBrowserUrlService;
 
         AllowedApplications = new ObservableCollection<string>();
         AllowedApplicationRules = new ObservableCollection<FocusApplicationRule>();
         InstalledApplications = new ObservableCollection<InstalledApplicationViewModel>();
         FilteredInstalledApplications = new ObservableCollection<InstalledApplicationViewModel>();
+        ProjectWebFocusHosts = new ObservableCollection<string>();
         DistractionLog = new ObservableCollection<string>();
 
         StartCommand = new AsyncCommand(_ => StartAsync(), _ => !_focusModeService.IsActive);
@@ -59,6 +71,7 @@ public sealed class FocusModeViewModel : ViewModelBase, IDisposable
         AddInstalledApplicationCommand = new RelayCommand(p => AddInstalledApplication(p as InstalledApplicationViewModel));
         RemoveInstalledApplicationCommand = new RelayCommand(p => RemoveInstalledApplication(p as InstalledApplicationViewModel));
         RefreshInstalledApplicationsCommand = new RelayCommand(_ => LoadInstalledApplications());
+        RefreshWebFocusHostsCommand = new RelayCommand(_ => LoadProjectWebFocusHosts());
         ShowApplicationDetailsCommand = new RelayCommand(p => ShowApplicationDetails(p as FocusApplicationRule));
 
         _focusModeService.StateChanged += OnFocusStateChanged;
@@ -72,6 +85,7 @@ public sealed class FocusModeViewModel : ViewModelBase, IDisposable
     public ObservableCollection<FocusApplicationRule> AllowedApplicationRules { get; }
     public ObservableCollection<InstalledApplicationViewModel> InstalledApplications { get; }
     public ObservableCollection<InstalledApplicationViewModel> FilteredInstalledApplications { get; }
+    public ObservableCollection<string> ProjectWebFocusHosts { get; }
     public ObservableCollection<string> DistractionLog { get; }
 
     public event EventHandler<string>? FocusWarningRequested;
@@ -147,6 +161,18 @@ public sealed class FocusModeViewModel : ViewModelBase, IDisposable
         private set => SetProperty(ref _focusStatusText, value);
     }
 
+    public string ProjectWebFocusSummary
+    {
+        get => _projectWebFocusSummary;
+        private set => SetProperty(ref _projectWebFocusSummary, value);
+    }
+
+    public bool HasProjectWebFocusHosts
+    {
+        get => _hasProjectWebFocusHosts;
+        private set => SetProperty(ref _hasProjectWebFocusHosts, value);
+    }
+
     public ICommand StartCommand { get; }
     public ICommand PauseCommand { get; }
     public ICommand StopCommand { get; }
@@ -157,6 +183,7 @@ public sealed class FocusModeViewModel : ViewModelBase, IDisposable
     public ICommand AddInstalledApplicationCommand { get; }
     public ICommand RemoveInstalledApplicationCommand { get; }
     public ICommand RefreshInstalledApplicationsCommand { get; }
+    public ICommand RefreshWebFocusHostsCommand { get; }
     public ICommand ShowApplicationDetailsCommand { get; }
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
@@ -164,7 +191,75 @@ public sealed class FocusModeViewModel : ViewModelBase, IDisposable
         var settings = await _settingsService.GetAsync(cancellationToken).ConfigureAwait(true);
         SelectedMode = FocusModeType.Strict;
         ApplyAllowedApplications(MergeWithDefaultAllowedApplications(settings.AllowedApplicationsSerialized));
+        LoadProjectWebFocusHosts();
         LoadInstalledApplications();
+    }
+
+    private void LoadProjectWebFocusHosts()
+    {
+        ProjectWebFocusHosts.Clear();
+
+        var projectDirectory = _projectService.CurrentProject?.ProjectDirectoryPath;
+        if (string.IsNullOrWhiteSpace(projectDirectory) || !Directory.Exists(projectDirectory))
+        {
+            ProjectWebFocusSummary = "Open a project to load web focus hosts.";
+            HasProjectWebFocusHosts = false;
+            return;
+        }
+
+        var webResourcesDirectory = Path.Combine(projectDirectory, "Web Resources");
+        if (!Directory.Exists(webResourcesDirectory))
+        {
+            ProjectWebFocusSummary = "No Web Resources folder in this project yet.";
+            HasProjectWebFocusHosts = false;
+            return;
+        }
+
+        var hosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var linkFile in Directory.EnumerateFiles(webResourcesDirectory, "*.reachit-link.json", SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                var json = File.ReadAllText(linkFile);
+                var metadata = JsonSerializer.Deserialize<WebResourceLinkMetadata>(
+                    json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (metadata is null)
+                {
+                    continue;
+                }
+
+                if (!WebResourceSecurity.IsSafeWebUrl(metadata.PrimaryUrl))
+                {
+                    continue;
+                }
+
+                foreach (var host in WebResourceSecurity.NormalizeAndValidateHosts(metadata.AllowedFocusHosts))
+                {
+                    AddHost(hosts, host);
+                }
+
+                AddUrlHost(hosts, metadata.PrimaryUrl);
+                foreach (var alternateUrl in WebResourceSecurity.NormalizeAndValidateUrls(metadata.AlternateUrls))
+                {
+                    AddUrlHost(hosts, alternateUrl);
+                }
+            }
+            catch
+            {
+                // One malformed link should not hide the rest of the project's web focus profile.
+            }
+        }
+
+        foreach (var host in hosts.Order(StringComparer.OrdinalIgnoreCase))
+        {
+            ProjectWebFocusHosts.Add(host);
+        }
+
+        HasProjectWebFocusHosts = ProjectWebFocusHosts.Count > 0;
+        ProjectWebFocusSummary = HasProjectWebFocusHosts
+            ? $"{ProjectWebFocusHosts.Count} project web host(s) ready for browser focus rules."
+            : "No allowed focus hosts found in project web resources.";
     }
 
     public async Task AddRecommendedApplicationsForPathAsync(string path, CancellationToken cancellationToken = default)
@@ -236,7 +331,27 @@ public sealed class FocusModeViewModel : ViewModelBase, IDisposable
         AllowedApplicationsText = string.Join(';', AllowedApplicationRules.Where(x => x.IsEnabled).Select(x => x.ProcessName));
         SyncInstalledApplicationAccess();
         await SaveFocusRulesAsync().ConfigureAwait(true);
+
+        if (IsBrowserProcess(processName))
+        {
+            await AddCurrentBrowserPageToProjectWebFocusAsync(cancellationToken).ConfigureAwait(true);
+        }
+
         _overlayService.ShowMessage($"{processName} added to Focus whitelist.");
+    }
+
+    public Task AllowCurrentBrowserPageOnceAsync(CancellationToken cancellationToken = default)
+    {
+        var url = _activeBrowserUrlService.TryGetActiveBrowserUrl();
+        if (string.IsNullOrWhiteSpace(url) || !WebResourceSecurity.IsSafeWebUrl(url))
+        {
+            _overlayService.ShowMessage("ReachIT could not read a safe browser URL to allow once.");
+            return Task.CompletedTask;
+        }
+
+        _focusModeService.AllowBrowserUrlOnce(url);
+        _overlayService.ShowMessage("This browser page is allowed once for the current focus session.");
+        return Task.CompletedTask;
     }
 
     private async Task StartAsync()
@@ -293,6 +408,82 @@ public sealed class FocusModeViewModel : ViewModelBase, IDisposable
         settings.FocusDistractingApplicationsSerialized = string.Empty;
         await _settingsService.SaveAsync(settings).ConfigureAwait(true);
         ApplyAllowedApplications(settings.AllowedApplicationsSerialized);
+
+        var currentSession = await _focusModeService.GetCurrentSessionAsync().ConfigureAwait(true);
+        if (currentSession is not null)
+        {
+            currentSession.AllowedApplications = ParseList(MergeWithDefaultAllowedApplications(settings.AllowedApplicationsSerialized)).ToList();
+        }
+    }
+
+    private async Task AddCurrentBrowserPageToProjectWebFocusAsync(CancellationToken cancellationToken)
+    {
+        var project = _projectService.CurrentProject;
+        if (project is null)
+        {
+            return;
+        }
+
+        var url = _activeBrowserUrlService.TryGetActiveBrowserUrl();
+        if (string.IsNullOrWhiteSpace(url) || !WebResourceSecurity.IsSafeWebUrl(url))
+        {
+            return;
+        }
+
+        var normalizedUrl = WebResourceSecurity.NormalizeAndValidateUrl(url);
+        if (!Uri.TryCreate(normalizedUrl, UriKind.Absolute, out var uri))
+        {
+            return;
+        }
+
+        var host = WebResourceSecurity.NormalizeAndValidateHost(uri.Host);
+        var webResourcesDirectory = Path.Combine(project.ProjectDirectoryPath, "Web Resources");
+        Directory.CreateDirectory(webResourcesDirectory);
+
+        var sidecarPath = Path.Combine(webResourcesDirectory, $"{MakeSafeFileName(host)}.reachit-link.json");
+        WebResourceLinkMetadata metadata;
+        if (File.Exists(sidecarPath))
+        {
+            try
+            {
+                var existingJson = await File.ReadAllTextAsync(sidecarPath, cancellationToken).ConfigureAwait(true);
+                metadata = JsonSerializer.Deserialize<WebResourceLinkMetadata>(
+                    existingJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new WebResourceLinkMetadata();
+            }
+            catch
+            {
+                metadata = new WebResourceLinkMetadata();
+            }
+        }
+        else
+        {
+            metadata = new WebResourceLinkMetadata
+            {
+                Title = host,
+                PrimaryUrl = normalizedUrl,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+        }
+
+        metadata.Title = string.IsNullOrWhiteSpace(metadata.Title) ? host : metadata.Title;
+        metadata.PrimaryUrl = string.IsNullOrWhiteSpace(metadata.PrimaryUrl) ? normalizedUrl : metadata.PrimaryUrl;
+        if (!metadata.AllowedFocusHosts.Contains(host, StringComparer.OrdinalIgnoreCase))
+        {
+            metadata.AllowedFocusHosts.Add(host);
+        }
+
+        if (!metadata.AlternateUrls.Contains(normalizedUrl, StringComparer.OrdinalIgnoreCase)
+            && !string.Equals(metadata.PrimaryUrl, normalizedUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            metadata.AlternateUrls.Add(normalizedUrl);
+        }
+
+        metadata.UpdatedAtUtc = DateTime.UtcNow;
+        var json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(sidecarPath, json, cancellationToken).ConfigureAwait(true);
+        LoadProjectWebFocusHosts();
+        _overlayService.ShowMessage($"{host} added to project web focus.");
     }
 
     private Task AddActiveAppAsync()
@@ -453,6 +644,58 @@ public sealed class FocusModeViewModel : ViewModelBase, IDisposable
     private static string NormalizeList(string value)
     {
         return string.Join(';', ParseList(value));
+    }
+
+    private static void AddUrlHost(ISet<string> hosts, string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return;
+        }
+
+        AddHost(hosts, uri.Host);
+    }
+
+    private static void AddHost(ISet<string> hosts, string host)
+    {
+        host = host.Trim().TrimEnd('/').ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return;
+        }
+
+        if (Uri.TryCreate(host, UriKind.Absolute, out var uri))
+        {
+            host = uri.Host.ToLowerInvariant();
+        }
+
+        if (host.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+        {
+            host = host[4..];
+        }
+
+        hosts.Add(host);
+    }
+
+    private static bool IsBrowserProcess(string processName)
+    {
+        return processName.Equals("chrome", StringComparison.OrdinalIgnoreCase)
+               || processName.Equals("msedge", StringComparison.OrdinalIgnoreCase)
+               || processName.Equals("firefox", StringComparison.OrdinalIgnoreCase)
+               || processName.Equals("brave", StringComparison.OrdinalIgnoreCase)
+               || processName.Equals("opera", StringComparison.OrdinalIgnoreCase)
+               || processName.Equals("vivaldi", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string MakeSafeFileName(string value)
+    {
+        var invalid = Path.GetInvalidFileNameChars().ToHashSet();
+        var safe = new string(value
+            .Select(ch => invalid.Contains(ch) ? '_' : ch)
+            .ToArray())
+            .Trim('.', ' ');
+
+        return string.IsNullOrWhiteSpace(safe) ? "web-resource" : safe;
     }
 
     private static string MergeWithDefaultAllowedApplications(string value)
@@ -1039,7 +1282,7 @@ public sealed class FocusModeViewModel : ViewModelBase, IDisposable
 file static class FocusDefaults
 {
     public const string AllowedApplicationsText =
-        "ReachIT;explorer;SearchHost;ShellExperienceHost;StartMenuExperienceHost;ApplicationFrameHost;Code;Cursor;devenv;rider64;idea64;pycharm64;webstorm64;clion64;datagrip64;phpstorm64;eclipse;notepad;notepad++;Notepad;WINWORD;EXCEL;POWERPNT;OUTLOOK;OneNote;Acrobat;FoxitPDFEditor;chrome;msedge;firefox;brave;steam;steamwebhelper;GameOverlayUI;FreeCAD;blender;Blockbench;Aseprite;Resolve;fusion360;acad;SketchUp;3dsmax;Maya;Photoshop;Illustrator;figma;inkscape;gimp;paintdotnet;PaintStudio.View;WindowsTerminal;wt;powershell;cmd;git-bash;putty;winscp;postman;insomnia;docker desktop;Docker Desktop;slack;Teams;Zoom";
+        "ReachIT;explorer;SearchHost;ShellExperienceHost;StartMenuExperienceHost;ApplicationFrameHost;Code;Cursor;devenv;rider64;idea64;pycharm64;webstorm64;clion64;datagrip64;phpstorm64;eclipse;notepad;notepad++;Notepad;WINWORD;EXCEL;POWERPNT;OUTLOOK;OneNote;Acrobat;FoxitPDFEditor;chrome;msedge;firefox;brave;steam;steamwebhelper;GameOverlayUI;FreeCAD;blender;Blockbench;Aseprite;Resolve;fusion360;acad;SketchUp;3dsmax;Maya;Photoshop;Illustrator;figma;inkscape;gimp;paintdotnet;PaintStudio.View;WindowsTerminal;wt;powershell;cmd;SnippingTool;ScreenClippingHost;Snipaste;ShareX;Lightshot;Greenshot;git-bash;putty;winscp;postman;insomnia;docker desktop;Docker Desktop;Spotify;Music.UI;iTunes;slack;Teams;Zoom";
 }
 
 public sealed record RecommendedApplication(string ProcessName, string DisplayName);

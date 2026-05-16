@@ -7,6 +7,7 @@
     <sys:String x:Key="Menu.View">Вигляд</sys:String>
     <sys:String x:Key="Menu.Focus">Фокус</sys:String>
     <sys:String x:Key="Menu.OpenProjectFolder">Відкрити папку проєкту</sys:String>
+    <sys:String x:Key="Menu.CreateProject">Створити проєкт</sys:String>
     <sys:String x:Key="Menu.Settings">Налаштування</sys:String>
     <sys:String x:Key="Menu.ExitApp">Вийти</sys:String>
     <sys:String x:Key="Menu.ControlCenter">Центр керування</sys:String>
@@ -70,6 +71,7 @@
     <sys:String x:Key="Explorer.NewFileTip">Створити файл у вибраній папці.</sys:String>
     <sys:String x:Key="Explorer.NewFolderTip">Створити папку у вибраній папці.</sys:String>
     <sys:String x:Key="Explorer.TaskTip">Відкрити менеджер задач.</sys:String>
+    <sys:String x:Key="Explorer.AddWebResourceTip">Додати вебсторінку в Web Resources.</sys:String>
     <sys:String x:Key="Explorer.OpenTip">Відкрити вибраний файл або папку.</sys:String>
     <sys:String x:Key="Explorer.RenameTip">Перейменувати вибраний елемент.</sys:String>
     <sys:String x:Key="Explorer.DeleteTip">Видалити вибраний елемент.</sys:String>
@@ -103,6 +105,8 @@
 
     <sys:String x:Key="Start.Title">ReachIT Hub</sys:String>
     <sys:String x:Key="Start.Subtitle">Вибери проєкт, створи новий робочий простір або переглянь новини перед тим, як ReachIT перейде у фон.</sys:String>
+    <sys:String x:Key="Start.QuickActions">Швидкі дії</sys:String>
+    <sys:String x:Key="Start.Account">Акаунт</sys:String>
     <sys:String x:Key="Start.OpenProject">Відкрити папку проєкту</sys:String>
     <sys:String x:Key="Start.CreateProject">+ Створити проєкт</sys:String>
     <sys:String x:Key="Start.Settings">Налаштування</sys:String>
@@ -237,6 +241,8 @@
     <sys:String x:Key="Developer.GenerateDemoProjectTip">Створити повний демо-проєкт у вибраній папці.</sys:String>
     <sys:String x:Key="Developer.GenerateRandomFiles">Згенерувати випадкові файли</sys:String>
     <sys:String x:Key="Developer.GenerateRandomFilesTip">Створити випадкові файли всередині поточного проєкту.</sys:String>
+    <sys:String x:Key="Developer.GenerateTestTasks">Створити тестові задачі</sys:String>
+    <sys:String x:Key="Developer.GenerateTestTasksTip">Додати реалістичний список задач у поточний проєкт без створення файлів.</sys:String>
     <sys:String x:Key="Developer.GenerateFormatCatalog">Згенерувати каталог форматів</sys:String>
     <sys:String x:Key="Developer.GenerateFormatCatalogTip">Створити по одному прикладу файлу для кожного підтримуваного тестового розширення.</sys:String>
     <sys:String x:Key="Developer.SimulateFileActivity">Імітувати активність файлів</sys:String>
@@ -263,4 +269,24 @@
     <sys:String x:Key="Create.AutofillTestProject">Автозаповнити тестовий проєкт</sys:String>
     <sys:String x:Key="Create.CreateProject">Створити проєкт</sys:String>
     <sys:String x:Key="Create.Cancel">Скасувати</sys:String>
+    <sys:String x:Key="Create.TemplateHelp.Study">Для лабораторних, курсів, підготовки до іспитів, нотаток і самонавчання. Починає з вимог, розбиття теми, матеріалів, основної роботи й фінальної перевірки.</sys:String>
+    <sys:String x:Key="Create.TemplateHelp.Freelance">Для роботи з клієнтом. Тримає вимоги, референси, раунди перевірки, правки й фінальну здачу на видноті.</sys:String>
+    <sys:String x:Key="Create.TemplateHelp.Creative">Для ігор, книжок, відео, модів, арту, дизайну, музики та іншої творчої роботи. Перетворює ідею на чернетку, а потім на готовий результат.</sys:String>
+    <sys:String x:Key="Create.TemplateHelp.Research">Для аналізу, порівняння, дослідження й звітів. Веде від питання до джерел, аналізу й чіткого висновку.</sys:String>
+    <sys:String x:Key="Create.TemplateHelp.Empty">Майже порожній проєкт з однією легкою планувальною задачею, щоб екран не був пустим.</sys:String>
+    <sys:String x:Key="Create.MainTopic.Study">Предмет / тема</sys:String>
+    <sys:String x:Key="Create.MainTopic.Freelance">Клієнт / замовлення</sys:String>
+    <sys:String x:Key="Create.MainTopic.Creative">Тип / ідея</sys:String>
+    <sys:String x:Key="Create.MainTopic.Research">Дослідницьке питання</sys:String>
+    <sys:String x:Key="Create.MainTopic.Default">Головний напрям</sys:String>
+    <sys:String x:Key="Create.ResultFormat.Study">Формат результату</sys:String>
+    <sys:String x:Key="Create.ResultFormat.Freelance">Формат здачі</sys:String>
+    <sys:String x:Key="Create.ResultFormat.Creative">Фінальний формат</sys:String>
+    <sys:String x:Key="Create.ResultFormat.Research">Результат дослідження</sys:String>
+    <sys:String x:Key="Create.ResultFormat.Default">Формат результату</sys:String>
+    <sys:String x:Key="Create.KnownSections.Study">Відомі підтеми</sys:String>
+    <sys:String x:Key="Create.KnownSections.Freelance">Відомі вимоги</sys:String>
+    <sys:String x:Key="Create.KnownSections.Creative">Відомі частини</sys:String>
+    <sys:String x:Key="Create.KnownSections.Research">Відомі напрями</sys:String>
+    <sys:String x:Key="Create.KnownSections.Default">Відомі етапи</sys:String>
 </ResourceDictionary>

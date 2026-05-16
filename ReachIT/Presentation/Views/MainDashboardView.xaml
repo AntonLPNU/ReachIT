@@ -2,98 +2,308 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="0,0,0,16">
-            <TextBlock Text="{DynamicResource Dashboard.ControlCenter}" Style="{StaticResource ReachItPageTitleTextStyle}" Margin="0,0,0,14" />
+    <UserControl.Resources>
+        <Style x:Key="DashboardBlockStyle" BasedOn="{StaticResource ReachItCardStyle}" TargetType="{x:Type Border}">
+            <Setter Property="Padding" Value="20" />
+            <Setter Property="Margin" Value="0,0,0,16" />
+        </Style>
 
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="14" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="14" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+        <Style x:Key="DashboardMetricStyle" BasedOn="{StaticResource ReachItMetricCardStyle}" TargetType="{x:Type Border}">
+            <Setter Property="Padding" Value="14,10" />
+        </Style>
 
-                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource ReachItCardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="{DynamicResource Dashboard.ProjectOverview}" Style="{StaticResource ReachItSectionTitleTextStyle}" />
-                        <TextBlock Text="{Binding ProjectName}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource ReachItTitleBrush}" />
-                        <TextBlock Text="{Binding ProjectDescription}" Style="{StaticResource ReachItMutedTextStyle}" Margin="0,6,0,0" />
+        <Style x:Key="DashboardListItemStyle" TargetType="{x:Type Border}">
+            <Setter Property="Background" Value="#101827" />
+            <Setter Property="BorderBrush" Value="#2B3E60" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="0,0,0,18">
+            <TextBlock Text="{DynamicResource Dashboard.ControlCenter}"
+                       Style="{StaticResource ReachItPageTitleTextStyle}"
+                       Margin="0,0,0,14" />
+
+            <Border Style="{StaticResource DashboardBlockStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="18" />
+                        <ColumnDefinition Width="300" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <iconPacks:PackIconMaterial Kind="ViewDashboard"
+                                                        Width="24"
+                                                        Height="24"
+                                                        Foreground="{StaticResource SkyAquaBrush}"
+                                                        Margin="0,2,10,0" />
+                            <TextBlock Text="{DynamicResource Dashboard.ProjectOverview}"
+                                       Style="{StaticResource ReachItSectionTitleTextStyle}"
+                                       Margin="0" />
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding ProjectName}"
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource ReachItTitleBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   TextWrapping="NoWrap" />
+                        <TextBlock Text="{Binding ProjectDescription}"
+                                   Style="{StaticResource ReachItMutedTextStyle}"
+                                   Margin="0,6,0,0"
+                                   TextTrimming="CharacterEllipsis"
+                                   TextWrapping="NoWrap" />
                         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                             <TextBlock Text="{DynamicResource Dashboard.Path}" Style="{StaticResource ReachItMutedTextStyle}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding ProjectPath}" Style="{StaticResource ReachItMutedTextStyle}" />
+                            <TextBlock Text="{Binding ProjectPath}"
+                                       Style="{StaticResource ReachItMutedTextStyle}"
+                                       TextTrimming="CharacterEllipsis"
+                                       TextWrapping="NoWrap" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                            <TextBlock Text="{DynamicResource Dashboard.Progress}" Style="{StaticResource ReachItLabelTextStyle}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding OverallProgress, StringFormat={}{0:F1}%}" Style="{StaticResource ReachItLabelTextStyle}" />
-                        </StackPanel>
-                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding OverallProgress, Mode=OneWay}" Margin="0,8,0,0" />
-                        <Button Command="{Binding OpenSidePanelCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" Margin="0,14,0,0" ToolTip="{DynamicResource Explorer.DockTip}">
+
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{DynamicResource Dashboard.Progress}" Style="{StaticResource ReachItLabelTextStyle}" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding OverallProgress, StringFormat={}{0:F1}%}"
+                                       Style="{StaticResource ReachItLabelTextStyle}"
+                                       FontSize="18" />
+                        </Grid>
+                        <ProgressBar Minimum="0"
+                                     Maximum="100"
+                                     Value="{Binding OverallProgress, Mode=OneWay}"
+                                     Height="14"
+                                     Margin="0,8,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" VerticalAlignment="Stretch">
+                        <Border Style="{StaticResource DashboardMetricStyle}" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Dashboard.ActiveMilestone}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                <TextBlock Text="{Binding ActiveMilestoneTitle}"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"
+                                           TextWrapping="NoWrap" />
+                            </StackPanel>
+                        </Border>
+                        <Button Command="{Binding OpenSidePanelCommand}"
+                                Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                Margin="0,0,0,8"
+                                ToolTip="{DynamicResource Explorer.DockTip}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <iconPacks:PackIconMaterial Kind="FolderOpen" Width="16" Height="16" Margin="0,0,8,0" />
                                 <TextBlock Text="{DynamicResource Dashboard.ProjectExplorer}" />
                             </StackPanel>
                         </Button>
-                    </StackPanel>
-                </Border>
-
-                <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource ReachItCardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="{DynamicResource Dashboard.TodayTasks}" Style="{StaticResource ReachItSectionTitleTextStyle}" />
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{DynamicResource Dashboard.Total}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding TotalTasks}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{DynamicResource Dashboard.Active}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding ActiveTasks}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{DynamicResource Dashboard.Completed}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding CompletedTasks}" />
-                        </StackPanel>
-                        <TextBlock Text="{DynamicResource Dashboard.NearestDeadlines}" Style="{StaticResource ReachItLabelTextStyle}" Margin="0,12,0,6" />
-                        <ItemsControl ItemsSource="{Binding NearestDeadlines}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Title}" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <Button Command="{Binding NewTaskCommand}" Margin="0,14,0,0">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <iconPacks:PackIconMaterial Kind="PlusCircle" Width="16" Height="16" Margin="0,0,8,0" />
-                                <TextBlock Text="{DynamicResource Dashboard.NewTask}" />
-                            </StackPanel>
-                        </Button>
-                        <Button Command="{Binding OpenActiveTasksCommand}"
+                        <Button Command="{Binding OpenProjectSettingsCommand}"
                                 Style="{StaticResource ReachItSecondaryButtonStyle}"
-                                Margin="0,8,0,0"
-                                ToolTip="{DynamicResource Dashboard.OpenActiveTasksTip}">
+                                Margin="0">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <iconPacks:PackIconMaterial Kind="FormatListBulleted" Width="16" Height="16" Margin="0,0,8,0" />
-                                <TextBlock Text="{DynamicResource Dashboard.OpenActiveTasks}" />
+                                <iconPacks:PackIconMaterial Kind="Cog" Width="16" Height="16" Margin="0,0,8,0" />
+                                <TextBlock Text="{DynamicResource Dashboard.Settings}" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Style="{StaticResource DashboardBlockStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="14" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="150" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <iconPacks:PackIconMaterial Kind="ClipboardText"
+                                                        Width="24"
+                                                        Height="24"
+                                                        Foreground="{StaticResource SkyAquaBrush}"
+                                                        Margin="0,2,10,0" />
+                            <TextBlock Text="{DynamicResource Dashboard.TodayTasks}"
+                                       Style="{StaticResource ReachItSectionTitleTextStyle}"
+                                       Margin="0" />
+                        </StackPanel>
+
+                        <Border Grid.Column="2" Style="{StaticResource DashboardMetricStyle}">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Dashboard.Total}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                <TextBlock Text="{Binding TotalTasks}" FontSize="24" FontWeight="Bold" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="4" Style="{StaticResource DashboardMetricStyle}">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Dashboard.Active}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                <TextBlock Text="{Binding ActiveTasks}" FontSize="24" FontWeight="Bold" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="6" Style="{StaticResource DashboardMetricStyle}">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Dashboard.Completed}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                <TextBlock Text="{Binding CompletedTasks}" FontSize="24" FontWeight="Bold" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="18" />
+                            <ColumnDefinition Width="280" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{DynamicResource Dashboard.NearestDeadlines}"
+                                       Style="{StaticResource ReachItLabelTextStyle}"
+                                       Margin="0,0,0,8" />
+                            <ItemsControl ItemsSource="{Binding NearestDeadlines}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource DashboardListItemStyle}">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" VerticalAlignment="Bottom">
+                            <Button Command="{Binding NewTaskCommand}" Margin="0,0,0,8">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="PlusCircle" Width="16" Height="16" Margin="0,0,8,0" />
+                                    <TextBlock Text="{DynamicResource Dashboard.NewTask}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding OpenActiveTasksCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    Margin="0"
+                                    ToolTip="{DynamicResource Dashboard.OpenActiveTasksTip}">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="FormatListBulleted" Width="16" Height="16" Margin="0,0,8,0" />
+                                    <TextBlock Text="{DynamicResource Dashboard.OpenActiveTasks}" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource DashboardBlockStyle}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                            <iconPacks:PackIconMaterial Kind="ChartLine"
+                                                        Width="24"
+                                                        Height="24"
+                                                        Foreground="{StaticResource SkyAquaBrush}"
+                                                        Margin="0,2,10,0" />
+                            <TextBlock Text="{DynamicResource Dashboard.Productivity}"
+                                       Style="{StaticResource ReachItSectionTitleTextStyle}"
+                                       Margin="0" />
+                        </StackPanel>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Style="{StaticResource DashboardMetricStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Dashboard.WorkedToday}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                    <TextBlock Text="{Binding WorkedTodayText}" FontSize="20" FontWeight="Bold" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Style="{StaticResource DashboardMetricStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Dashboard.WorkedWeek}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                    <TextBlock Text="{Binding WorkedWeekText}" FontSize="20" FontWeight="Bold" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="4" Style="{StaticResource DashboardMetricStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Dashboard.Score}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                    <TextBlock Text="{Binding ProductivityScore}" FontSize="20" FontWeight="Bold" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Button Command="{Binding OpenTaskCommand}"
+                                Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                Margin="0,16,0,0"
+                                ToolTip="{DynamicResource Menu.Statistics}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <iconPacks:PackIconMaterial Kind="ChartLine" Width="16" Height="16" Margin="0,0,8,0" />
+                                <TextBlock Text="{DynamicResource Dashboard.MoreDetails}" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource ReachItCardStyle}">
+                <Border Grid.Column="2" Style="{StaticResource DashboardBlockStyle}">
                     <StackPanel>
-                        <TextBlock Text="{DynamicResource Dashboard.FocusStatus}" Style="{StaticResource ReachItSectionTitleTextStyle}" />
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{DynamicResource Dashboard.Status}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding FocusStatus}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                            <iconPacks:PackIconMaterial Kind="ShieldCheck"
+                                                        Width="24"
+                                                        Height="24"
+                                                        Foreground="{StaticResource SkyAquaBrush}"
+                                                        Margin="0,2,10,0" />
+                            <TextBlock Text="{DynamicResource Dashboard.FocusStatus}"
+                                       Style="{StaticResource ReachItSectionTitleTextStyle}"
+                                       Margin="0" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{DynamicResource Dashboard.Interruptions}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding InterruptionsCount}" />
-                        </StackPanel>
-                        <Button Command="{Binding ToggleFocusModeCommand}" Margin="0,14,0,0">
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Style="{StaticResource DashboardMetricStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Dashboard.Status}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                    <TextBlock Text="{Binding FocusStatus}" FontSize="20" FontWeight="Bold" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Style="{StaticResource DashboardMetricStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Dashboard.Interruptions}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                    <TextBlock Text="{Binding InterruptionsCount}" FontSize="20" FontWeight="Bold" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Button Command="{Binding ToggleFocusModeCommand}" Margin="0,16,0,0">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <iconPacks:PackIconMaterial Kind="PlayPause" Width="16" Height="16" Margin="0,0,8,0" />
                                 <TextBlock Text="{DynamicResource Dashboard.ToggleFocus}" />
@@ -101,45 +311,13 @@
                         </Button>
                     </StackPanel>
                 </Border>
-
-                <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource ReachItCardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="{DynamicResource Dashboard.Productivity}" Style="{StaticResource ReachItSectionTitleTextStyle}" />
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{DynamicResource Dashboard.WorkedToday}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding WorkedTodayText}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{DynamicResource Dashboard.WorkedWeek}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding WorkedWeekText}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{DynamicResource Dashboard.Score}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding ProductivityScore}" />
-                        </StackPanel>
-                        <WrapPanel Margin="0,14,0,0">
-                            <Button Command="{Binding OpenTaskCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="{DynamicResource Menu.Statistics}">
-                                <StackPanel Orientation="Horizontal">
-                                    <iconPacks:PackIconMaterial Kind="ChartLine" Width="16" Height="16" Margin="0,0,8,0" />
-                                    <TextBlock Text="{DynamicResource Dashboard.MoreDetails}" />
-                                </StackPanel>
-                            </Button>
-                            <Button Command="{Binding OpenProjectSettingsCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}">
-                                <StackPanel Orientation="Horizontal">
-                                    <iconPacks:PackIconMaterial Kind="Cog" Width="16" Height="16" Margin="0,0,8,0" />
-                                    <TextBlock Text="{DynamicResource Dashboard.Settings}" />
-                                </StackPanel>
-                            </Button>
-                        </WrapPanel>
-                    </StackPanel>
-                </Border>
             </Grid>
 
-            <Border Style="{StaticResource ReachItCardStyle}" Margin="0,14,0,0">
+            <Border Style="{StaticResource DashboardBlockStyle}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="280" />
-                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="16" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
@@ -204,62 +382,287 @@
                 </Grid>
             </Border>
 
-            <Border Style="{StaticResource ReachItCardStyle}" Margin="0,14,0,0">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="14" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="14" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="{DynamicResource Dashboard.ProgressDashboard}" Style="{StaticResource ReachItSectionTitleTextStyle}" />
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{DynamicResource Dashboard.ActiveMilestone}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding ActiveMilestoneTitle}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{DynamicResource Dashboard.WorkItemsInProgress}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding WorkItemsInProgress}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{DynamicResource Dashboard.FilesChangedToday}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding FilesChangedToday}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{DynamicResource Dashboard.FocusMinutesToday}" Margin="0,0,4,0" />
-                            <TextBlock Text="{Binding FocusMinutesToday, StringFormat={}{0:F0}}" />
-                        </StackPanel>
-                        <TextBlock Text="{DynamicResource Dashboard.CurrentContext}" Style="{StaticResource ReachItLabelTextStyle}" Margin="0,10,0,4" />
-                        <TextBlock Text="{Binding CurrentWorkContext}" Style="{StaticResource ReachItMutedTextStyle}" />
+            <Border Style="{StaticResource DashboardBlockStyle}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <iconPacks:PackIconMaterial Kind="ChartDonut"
+                                                    Width="24"
+                                                    Height="24"
+                                                    Foreground="{StaticResource SkyAquaBrush}"
+                                                    Margin="0,2,10,0" />
+                        <TextBlock Text="{DynamicResource Dashboard.ProgressDashboard}"
+                                   Style="{StaticResource ReachItSectionTitleTextStyle}"
+                                   Margin="0" />
                     </StackPanel>
 
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="{DynamicResource Dashboard.SuggestedTasks}" Style="{StaticResource ReachItSectionTitleTextStyle}" />
-                        <ItemsControl ItemsSource="{Binding SuggestedTasks}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="#101827" BorderBrush="{StaticResource ReachItBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,0,6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.1*" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="1.05*" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="1.05*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Стан проекту"
+                                       Style="{StaticResource ReachItSectionTitleTextStyle}"
+                                       Margin="0,0,0,10" />
+                            <Border Style="{StaticResource DashboardMetricStyle}" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="{Binding SuggestedTitle}" FontWeight="SemiBold" />
-                                            <TextBlock Text="{Binding Reason}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                            <TextBlock Text="{Binding ProjectState}"
+                                                       FontSize="18"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding ActiveMilestoneTitle, StringFormat=Етап: {0}}"
+                                                       Style="{StaticResource ReachItMutedTextStyle}"
+                                                       Margin="0,2,0,0"
+                                                       TextTrimming="CharacterEllipsis" />
                                         </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding ProjectHealthScore, StringFormat={}{0:F0}%}"
+                                                   FontSize="30"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource SkyAquaBrush}" />
+                                    </Grid>
 
-                    <Grid Grid.Column="4">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="12" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <StackPanel>
+                                    <Canvas Height="150" Margin="0,16,0,0" ClipToBounds="True">
+                                        <Line X1="0" Y1="15" X2="320" Y2="15" Stroke="{StaticResource ReachItBorderBrush}" StrokeThickness="1" Opacity="0.45" />
+                                        <Line X1="0" Y1="75" X2="320" Y2="75" Stroke="{StaticResource ReachItBorderBrush}" StrokeThickness="1" Opacity="0.35" />
+                                        <Line X1="0" Y1="135" X2="320" Y2="135" Stroke="{StaticResource ReachItBorderBrush}" StrokeThickness="1" Opacity="0.45" />
+                                        <Polyline Points="{Binding ProjectTrendPoints, Mode=OneWay}"
+                                                  Stroke="#4647E8"
+                                                  StrokeThickness="8"
+                                                  Opacity="0.16"
+                                                  StrokeLineJoin="Round" />
+                                        <Polyline Points="{Binding ProjectTrendPoints, Mode=OneWay}"
+                                                  Stroke="{StaticResource SkyAquaBrush}"
+                                                  StrokeThickness="3"
+                                                  StrokeLineJoin="Round" />
+                                        <TextBlock Canvas.Left="0" Canvas.Top="132" Text="0" Style="{StaticResource ReachItMutedTextStyle}" FontSize="10" />
+                                        <TextBlock Canvas.Left="292" Canvas.Top="0" Text="100" Style="{StaticResource ReachItMutedTextStyle}" FontSize="10" />
+                                    </Canvas>
+                                </StackPanel>
+                            </Border>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Style="{StaticResource DashboardMetricStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="WorkItems у роботі" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                        <TextBlock Text="{Binding WorkItemsInProgress}" FontSize="22" FontWeight="Bold" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" Style="{StaticResource DashboardMetricStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Змінено файлів" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                        <TextBlock Text="{Binding FilesChangedToday}" FontSize="22" FontWeight="Bold" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Діаграма задач"
+                                       Style="{StaticResource ReachItSectionTitleTextStyle}"
+                                       Margin="0,0,0,10" />
+                            <Border Style="{StaticResource DashboardMetricStyle}">
+                                <StackPanel>
+                                    <Canvas Height="190" ClipToBounds="True">
+                                        <Line X1="0" Y1="28" X2="300" Y2="28" Stroke="{StaticResource ReachItBorderBrush}" StrokeThickness="1" Opacity="0.35" />
+                                        <Line X1="0" Y1="82" X2="300" Y2="82" Stroke="{StaticResource ReachItBorderBrush}" StrokeThickness="1" Opacity="0.28" />
+                                        <Line X1="0" Y1="136" X2="300" Y2="136" Stroke="{StaticResource ReachItBorderBrush}" StrokeThickness="1" Opacity="0.35" />
+
+                                        <Rectangle Canvas.Left="36"
+                                                   Canvas.Bottom="34"
+                                                   Width="50"
+                                                   Height="{Binding CompletedTasksChartHeight, Mode=OneWay}"
+                                                   Fill="{StaticResource SkyAquaBrush}"
+                                                   RadiusX="8"
+                                                   RadiusY="8" />
+                                        <Rectangle Canvas.Left="124"
+                                                   Canvas.Bottom="34"
+                                                   Width="50"
+                                                   Height="{Binding ActiveTasksChartHeight, Mode=OneWay}"
+                                                   Fill="#4A82F4"
+                                                   RadiusX="8"
+                                                   RadiusY="8" />
+                                        <Rectangle Canvas.Left="212"
+                                                   Canvas.Bottom="34"
+                                                   Width="50"
+                                                   Height="{Binding OverdueTasksChartHeight, Mode=OneWay}"
+                                                   Fill="{StaticResource NeonPinkBrush}"
+                                                   RadiusX="8"
+                                                   RadiusY="8" />
+
+                                        <TextBlock Canvas.Left="34" Canvas.Top="160" Text="Готові" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                        <TextBlock Canvas.Left="120" Canvas.Top="160" Text="Активні" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                        <TextBlock Canvas.Left="203" Canvas.Top="160" Text="Простр." Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                    </Canvas>
+
+                                    <Grid Margin="0,4,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding CompletedTasksPercent, StringFormat={}{0:F0}%}"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource SkyAquaBrush}"
+                                                   HorizontalAlignment="Center" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding ActiveTasksPercent, StringFormat={}{0:F0}%}"
+                                                   FontWeight="Bold"
+                                                   Foreground="#7FB0FF"
+                                                   HorizontalAlignment="Center" />
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding OverdueTasksPercent, StringFormat={}{0:F0}%}"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource NeonPinkBrush}"
+                                                   HorizontalAlignment="Center" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding TotalTasks, StringFormat=Усього задач: {0}}"
+                                               Style="{StaticResource ReachItMutedTextStyle}"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <Grid Grid.Column="4">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="12" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0">
+                                <TextBlock Text="Ваш стан сьогодні"
+                                           Style="{StaticResource ReachItSectionTitleTextStyle}"
+                                           Margin="0,0,0,10" />
+                                <Border Style="{StaticResource DashboardMetricStyle}">
+                                    <StackPanel>
+                                        <Canvas Height="190" ClipToBounds="True">
+                                            <Line X1="0" Y1="28" X2="300" Y2="28" Stroke="{StaticResource ReachItBorderBrush}" StrokeThickness="1" Opacity="0.35" />
+                                            <Line X1="0" Y1="82" X2="300" Y2="82" Stroke="{StaticResource ReachItBorderBrush}" StrokeThickness="1" Opacity="0.28" />
+                                            <Line X1="0" Y1="136" X2="300" Y2="136" Stroke="{StaticResource ReachItBorderBrush}" StrokeThickness="1" Opacity="0.35" />
+
+                                            <Rectangle Canvas.Left="32"
+                                                       Canvas.Bottom="34"
+                                                       Width="44"
+                                                       Height="{Binding FocusChartHeight, Mode=OneWay}"
+                                                       Fill="{StaticResource SkyAquaBrush}"
+                                                       RadiusX="8"
+                                                       RadiusY="8" />
+                                            <Rectangle Canvas.Left="108"
+                                                       Canvas.Bottom="34"
+                                                       Width="44"
+                                                       Height="{Binding FileActivityChartHeight, Mode=OneWay}"
+                                                       Fill="#4A82F4"
+                                                       RadiusX="8"
+                                                       RadiusY="8" />
+                                            <Rectangle Canvas.Left="184"
+                                                       Canvas.Bottom="34"
+                                                       Width="44"
+                                                       Height="{Binding ProductivityChartHeight, Mode=OneWay}"
+                                                       Fill="#7C5CFF"
+                                                       RadiusX="8"
+                                                       RadiusY="8" />
+                                            <Rectangle Canvas.Left="260"
+                                                       Canvas.Bottom="34"
+                                                       Width="44"
+                                                       Height="{Binding ProgressChartHeight, Mode=OneWay}"
+                                                       Fill="{StaticResource NeonPinkBrush}"
+                                                       RadiusX="8"
+                                                       RadiusY="8" />
+
+                                            <TextBlock Canvas.Left="28" Canvas.Top="160" Text="Фокус" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                            <TextBlock Canvas.Left="101" Canvas.Top="160" Text="Файли" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                            <TextBlock Canvas.Left="171" Canvas.Top="160" Text="Бал" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                            <TextBlock Canvas.Left="248" Canvas.Top="160" Text="Прогр." Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                        </Canvas>
+
+                                        <Grid Margin="0,4,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding FocusMinutesToday, StringFormat=Фокус: {0:F0} хв}"
+                                                       Style="{StaticResource ReachItMutedTextStyle}" />
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding ProductivityScore, StringFormat=Продуктивність: {0}}"
+                                                       Style="{StaticResource ReachItMutedTextStyle}"
+                                                       HorizontalAlignment="Right" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2">
+                                <TextBlock Text="{DynamicResource Dashboard.SuggestedTasks}" Style="{StaticResource ReachItSectionTitleTextStyle}" />
+                                <Border Style="{StaticResource DashboardListItemStyle}"
+                                        Visibility="{Binding SuggestedTasksEmptyVisibility}">
+                                    <StackPanel>
+                                        <TextBlock Text="Наразі немає запропонованих задач."
+                                                   FontWeight="SemiBold" />
+                                        <TextBlock Text="Коли ReachIT знайде прострочені, застарілі або логічні наступні кроки, вони з'являться тут."
+                                                   Style="{StaticResource ReachItMutedTextStyle}"
+                                                   FontSize="11"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding SuggestedTasks}"
+                                              Visibility="{Binding SuggestedTasksListVisibility}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource DashboardListItemStyle}">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding SuggestedTitle}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding Reason}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+
+                    <Separator Margin="0,16,0,14" />
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
                             <TextBlock Text="{DynamicResource Dashboard.StaleTasks}" Style="{StaticResource ReachItSectionTitleTextStyle}" />
-                            <ItemsControl ItemsSource="{Binding StaleWorkItems}">
+                            <Border Style="{StaticResource DashboardListItemStyle}"
+                                    Visibility="{Binding StaleWorkItemsEmptyVisibility}">
+                                <StackPanel>
+                                    <TextBlock Text="Немає задач без активності."
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="Усі активні задачі зараз виглядають живими або ще не мають достатньо історії для попередження."
+                                               Style="{StaticResource ReachItMutedTextStyle}"
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               Margin="0,3,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding StaleWorkItems}"
+                                          Visibility="{Binding StaleWorkItemsListVisibility}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding Title}" Style="{StaticResource ReachItMutedTextStyle}" Margin="0,0,0,4" />
@@ -267,9 +670,22 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-                        <StackPanel Grid.Row="2">
+                        <StackPanel Grid.Column="2">
                             <TextBlock Text="{DynamicResource Dashboard.RecentlyCompleted}" Style="{StaticResource ReachItSectionTitleTextStyle}" />
-                            <ItemsControl ItemsSource="{Binding RecentlyCompletedWorkItems}">
+                            <Border Style="{StaticResource DashboardListItemStyle}"
+                                    Visibility="{Binding RecentlyCompletedEmptyVisibility}">
+                                <StackPanel>
+                                    <TextBlock Text="Ще немає нещодавно виконаних задач."
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="Коли ти закриєш задачу або WorkItem, ReachIT покаже її тут як останній прогрес."
+                                               Style="{StaticResource ReachItMutedTextStyle}"
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               Margin="0,3,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding RecentlyCompletedWorkItems}"
+                                          Visibility="{Binding RecentlyCompletedListVisibility}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding Title}" Style="{StaticResource ReachItMutedTextStyle}" Margin="0,0,0,4" />
@@ -278,7 +694,7 @@
                             </ItemsControl>
                         </StackPanel>
                     </Grid>
-                </Grid>
+                </StackPanel>
             </Border>
         </StackPanel>
     </ScrollViewer>

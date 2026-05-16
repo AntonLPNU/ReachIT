@@ -110,6 +110,63 @@ public sealed class DeveloperProjectGeneratorService : IDeveloperProjectGenerato
         return created;
     }
 
+    public async Task<int> GenerateTestTasksAsync(ProjectMeta project, int count, CancellationToken cancellationToken = default)
+    {
+        count = Math.Clamp(count, 1, 100);
+        var rootTasks = new[]
+        {
+            "Plan project structure",
+            "Prepare source materials",
+            "Build first working version",
+            "Review quality",
+            "Package final result"
+        };
+
+        var created = 0;
+        foreach (var rootTitle in rootTasks)
+        {
+            if (created >= count)
+            {
+                break;
+            }
+
+            var root = new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Title = $"Test backlog: {rootTitle}",
+                Description = "Developer-generated task used to test planning, filtering, deadlines, nesting, and dashboard counters.",
+                Priority = Random.Shared.Next(1, 4),
+                Status = created % 2 == 0 ? "In Progress" : "To Do",
+                DueDateUtc = DateTime.UtcNow.AddDays(Random.Shared.Next(1, 14))
+            };
+            await _taskService.AddTaskAsync(root, cancellationToken).ConfigureAwait(false);
+            created++;
+
+            foreach (var childTitle in TestChildTasks(rootTitle).Take(Math.Max(0, count - created)))
+            {
+                var child = new TaskItem
+                {
+                    Id = Guid.NewGuid(),
+                    Title = childTitle,
+                    Description = $"Generated child task under '{rootTitle}'.",
+                    ParentTaskId = root.Id,
+                    Priority = Random.Shared.Next(1, 4),
+                    Status = "To Do",
+                    DueDateUtc = DateTime.UtcNow.AddDays(Random.Shared.Next(1, 21))
+                };
+                await _taskService.AddTaskAsync(child, cancellationToken).ConfigureAwait(false);
+                created++;
+
+                if (created >= count)
+                {
+                    break;
+                }
+            }
+        }
+
+        return created;
+    }
+
     public async Task<IReadOnlyList<string>> GenerateFormatCatalogAsync(ProjectMeta project, CancellationToken cancellationToken = default)
     {
         var created = new List<string>();
@@ -249,6 +306,48 @@ public sealed class DeveloperProjectGeneratorService : IDeveloperProjectGenerato
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static IReadOnlyList<string> TestChildTasks(string rootTitle)
+    {
+        return rootTitle switch
+        {
+            "Plan project structure" =>
+            [
+                "Write final goal",
+                "Split work into stages",
+                "Choose first small task",
+                "Check deadline risk"
+            ],
+            "Prepare source materials" =>
+            [
+                "Collect references",
+                "Sort files by folder",
+                "Mark missing assets",
+                "Attach important documents"
+            ],
+            "Build first working version" =>
+            [
+                "Create draft result",
+                "Test core workflow",
+                "Record blockers",
+                "Update progress notes"
+            ],
+            "Review quality" =>
+            [
+                "Review open tasks",
+                "Fix naming issues",
+                "Validate linked files",
+                "Mark completed items"
+            ],
+            _ =>
+            [
+                "Prepare archive",
+                "Write release notes",
+                "Export final files",
+                "Close project checklist"
+            ]
+        };
     }
 
     private async Task CreateTaskHierarchyForRandomFilesAsync(

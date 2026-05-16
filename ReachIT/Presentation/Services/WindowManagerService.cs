@@ -1,5 +1,8 @@
 using System.Windows;
+using System.Windows.Threading;
+using ReachIT.Application;
 using ReachIT.Application.Contracts;
+using ReachIT.Application.Security;
 using ReachIT.Domain.Models;
 using ReachIT.Infrastructure.Logging;
 using ReachIT.Presentation.ViewModels;
@@ -31,6 +34,7 @@ public sealed class WindowManagerService : IWindowManagerService
     private FocusWarningWindow? _focusWarningWindow;
     private MainWindow? _mainWindow;
     private SidePanelWindow? _projectExplorerWindow;
+    private DispatcherTimer? _quickMenuHoverTimer;
     private bool _isExitRequested;
     private bool _viewModelsWired;
     private bool _infrastructureWired;
@@ -108,6 +112,7 @@ public sealed class WindowManagerService : IWindowManagerService
 
     public void HideFloatingLogo()
     {
+        StopQuickMenuHoverTimer();
         _quickMenuWindow?.Hide();
         _floatingLogoWindow?.Hide();
     }
@@ -116,6 +121,7 @@ public sealed class WindowManagerService : IWindowManagerService
     {
         EnsureFloatingLogoWindow();
         EnsureQuickMenuWindow();
+        StopQuickMenuHoverTimer();
 
         if (_quickMenuWindow!.IsVisible)
         {
@@ -138,6 +144,77 @@ public sealed class WindowManagerService : IWindowManagerService
         {
             _quickMenuWindow.Show();
         }
+
+        KeepQuickMenuInsideVirtualScreen();
+        StopQuickMenuHoverTimer();
+    }
+
+    private void KeepQuickMenuInsideVirtualScreen()
+    {
+        if (_quickMenuWindow is null || _floatingLogoWindow is null)
+        {
+            return;
+        }
+
+        var menuWidth = _quickMenuWindow.ActualWidth > 0 ? _quickMenuWindow.ActualWidth : _quickMenuWindow.Width;
+        var menuHeight = _quickMenuWindow.ActualHeight > 0 ? _quickMenuWindow.ActualHeight : _quickMenuWindow.Height;
+        if (double.IsNaN(menuHeight) || menuHeight <= 0)
+        {
+            menuHeight = 520;
+        }
+
+        var minLeft = SystemParameters.VirtualScreenLeft;
+        var minTop = SystemParameters.VirtualScreenTop;
+        var maxLeft = minLeft + SystemParameters.VirtualScreenWidth - menuWidth;
+        var maxTop = minTop + SystemParameters.VirtualScreenHeight - menuHeight;
+
+        if (_quickMenuWindow.Left > maxLeft)
+        {
+            _quickMenuWindow.Left = _floatingLogoWindow.Left - menuWidth - 10;
+        }
+
+        _quickMenuWindow.Left = Math.Min(Math.Max(_quickMenuWindow.Left, minLeft), maxLeft);
+        _quickMenuWindow.Top = Math.Min(Math.Max(_quickMenuWindow.Top, minTop), maxTop);
+    }
+
+    private void ScheduleQuickMenuHoverClose()
+    {
+        EnsureQuickMenuHoverTimer();
+        _quickMenuHoverTimer!.Stop();
+        _quickMenuHoverTimer.Start();
+    }
+
+    private void StopQuickMenuHoverTimer()
+    {
+        _quickMenuHoverTimer?.Stop();
+    }
+
+    private void EnsureQuickMenuHoverTimer()
+    {
+        if (_quickMenuHoverTimer is not null)
+        {
+            return;
+        }
+
+        _quickMenuHoverTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(260)
+        };
+        _quickMenuHoverTimer.Tick += (_, _) =>
+        {
+            _quickMenuHoverTimer.Stop();
+            if (_quickMenuWindow is null || !_quickMenuWindow.IsVisible)
+            {
+                return;
+            }
+
+            if ((_floatingLogoWindow?.IsMouseOver ?? false) || _quickMenuWindow.IsMouseOver)
+            {
+                return;
+            }
+
+            _quickMenuWindow.Hide();
+        };
     }
 
     public async void OpenQuickAddTask()
@@ -151,6 +228,7 @@ public sealed class WindowManagerService : IWindowManagerService
     public void OpenProjectExplorer()
     {
         EnsureProjectExplorerWindow();
+        _projectExplorerWindow!.ApplyFloatingLeftLayout();
         _projectExplorerWindow!.Show();
         _projectExplorerWindow.Activate();
     }
@@ -214,16 +292,28 @@ public sealed class WindowManagerService : IWindowManagerService
             return;
         }
 
-        var opened = await _projectService.OpenProjectAsync(projectFolderPath, cancellationToken).ConfigureAwait(true);
-        if (opened is not null && _settings is not null)
+        try
         {
-            _logger.LogInformation($"Opened project: {opened.ProjectDirectoryPath}");
-            _settings.LastOpenedProjectPath = opened.ProjectDirectoryPath;
-            await _settingsService.SaveAsync(_settings, cancellationToken).ConfigureAwait(true);
+            var opened = await _projectService.OpenProjectAsync(projectFolderPath, cancellationToken).ConfigureAwait(true);
+            if (opened is not null && _settings is not null)
+            {
+                _logger.LogInformation($"Opened project: {opened.ProjectDirectoryPath}");
+                _settings.LastOpenedProjectPath = opened.ProjectDirectoryPath;
+                await _settingsService.SaveAsync(_settings, cancellationToken).ConfigureAwait(true);
+            }
+            else
+            {
+                _logger.LogWarning($"Project open returned no project for path: {projectFolderPath}");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            _logger.LogWarning($"Project open returned no project for path: {projectFolderPath}");
+            _logger.LogError($"Failed to open project '{projectFolderPath}': {ex}");
+            MessageBox.Show(
+                $"Could not open this folder as a ReachIT project.\n\n{ex.Message}",
+                "ReachIT",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
         }
     }
 
@@ -241,6 +331,9 @@ public sealed class WindowManagerService : IWindowManagerService
         _quickMenuViewModel.NewTaskRequested += (_, _) => OpenQuickAddTask();
         _quickMenuViewModel.ProjectExplorerRequested += (_, _) => OpenProjectExplorer();
         _quickMenuViewModel.FocusModeRequested += (_, _) => ToggleFocusMode();
+        _quickMenuViewModel.AddCurrentSiteRequested += async (_, _) => await AddCurrentSiteFromClipboardAsync().ConfigureAwait(true);
+        _quickMenuViewModel.HighlightRequested += async (_, color) => await CaptureWebHighlightAsync(color).ConfigureAwait(true);
+        _quickMenuViewModel.WebResourcesRequested += async (_, _) => await OpenWebResourcesAsync().ConfigureAwait(true);
         _quickMenuViewModel.StatisticsRequested += (_, _) => OpenStatistics();
         _quickMenuViewModel.MainWindowRequested += (_, _) => OpenMainWindow();
         _quickMenuViewModel.SettingsRequested += (_, _) => OpenSettings();
@@ -265,6 +358,7 @@ public sealed class WindowManagerService : IWindowManagerService
             await _settingsViewModel.LoadAsync().ConfigureAwait(true);
         };
         _mainViewModel.RequestOpenDeveloperTestPanel += async (_, _) => await OpenDeveloperTestPanelAsync().ConfigureAwait(true);
+        _mainViewModel.RequestCreateProject += async (_, _) => await OpenCreateProjectFromWorkspaceAsync().ConfigureAwait(true);
         _mainViewModel.RequestCloseProject += async (_, _) => await CloseProjectAndShowHubAsync().ConfigureAwait(true);
         _mainViewModel.FocusModeViewModel.FocusWarningRequested += (_, appName) => ShowFocusWarning(appName);
 
@@ -372,6 +466,7 @@ public sealed class WindowManagerService : IWindowManagerService
 
     private void OpenCreateProjectWindow(Window owner)
     {
+        _createProjectViewModel.Reset();
         var createWindow = new CreateProjectWindow
         {
             Owner = owner,
@@ -382,6 +477,27 @@ public sealed class WindowManagerService : IWindowManagerService
         if (created == true && !string.IsNullOrWhiteSpace(_createProjectViewModel.CreatedProjectFolderPath))
         {
             _startViewModel.CompleteOpen(_createProjectViewModel.CreatedProjectFolderPath);
+        }
+    }
+
+    private async Task OpenCreateProjectFromWorkspaceAsync()
+    {
+        EnsureMainWindow();
+        _createProjectViewModel.Reset();
+        var createWindow = new CreateProjectWindow
+        {
+            Owner = _mainWindow,
+            DataContext = _createProjectViewModel
+        };
+
+        var created = createWindow.ShowDialog();
+        if (created == true && !string.IsNullOrWhiteSpace(_createProjectViewModel.CreatedProjectFolderPath))
+        {
+            _settings ??= await _settingsService.GetAsync().ConfigureAwait(true);
+            _settings.LastOpenedProjectPath = _createProjectViewModel.CreatedProjectFolderPath;
+            await _settingsService.SaveAsync(_settings).ConfigureAwait(true);
+            await _mainViewModel.InitializeAsync().ConfigureAwait(true);
+            OpenMainWindow();
         }
     }
 
@@ -398,6 +514,17 @@ public sealed class WindowManagerService : IWindowManagerService
 
     private async Task OpenDeveloperTestPanelAsync()
     {
+        if (!DeveloperTools.IsEnabled)
+        {
+            MessageBox.Show(
+                "Developer tools are disabled in this build.",
+                ResourceText("Developer.MessageTitle", "ReachIT Developer"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+#if ENABLE_DEVELOPER_TOOLS
         var account = await _accountService.GetAccountStateAsync().ConfigureAwait(true);
         if (!account.User.IsDeveloperAccount && account.Subscription.PlanType != ReachIT.Domain.Enums.SubscriptionPlanType.Internal)
         {
@@ -426,6 +553,9 @@ public sealed class WindowManagerService : IWindowManagerService
 
         panel.Show();
         panel.Activate();
+#else
+        await Task.CompletedTask.ConfigureAwait(true);
+#endif
     }
 
     private void OpenStartupSettingsWindow(Window owner)
@@ -457,9 +587,14 @@ public sealed class WindowManagerService : IWindowManagerService
         _floatingLogoWindow = new FloatingLogoWindow
         {
             DataContext = _floatingLogoViewModel,
+            Width = 76,
+            Height = 76,
             Left = _settings?.FloatingLogoLeft ?? 24,
             Top = _settings?.FloatingLogoTop ?? 160
         };
+
+        _floatingLogoWindow.MouseEnter += (_, _) => ShowQuickMenu();
+        _floatingLogoWindow.MouseLeave += (_, _) => ScheduleQuickMenuHoverClose();
 
         _floatingLogoWindow.PositionChangedByUser += async (_, _) =>
         {
@@ -474,9 +609,59 @@ public sealed class WindowManagerService : IWindowManagerService
         };
     }
 
+    private async Task AddCurrentSiteFromClipboardAsync()
+    {
+        string clipboardText;
+        try
+        {
+            clipboardText = Clipboard.ContainsText() ? Clipboard.GetText().Trim() : string.Empty;
+        }
+        catch
+        {
+            clipboardText = string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(clipboardText) && WebResourceSecurity.IsSafeWebUrl(clipboardText))
+        {
+            if (await _mainViewModel.AddWebResourceFromUrlAsync(clipboardText).ConfigureAwait(true))
+            {
+                _quickMenuWindow?.Hide();
+            }
+
+            return;
+        }
+
+        _quickMenuWindow?.Hide();
+        _mainViewModel.AddWebResourceCommand.Execute(null);
+    }
+
+    private async Task CaptureWebHighlightAsync(string color)
+    {
+        var saved = await _mainViewModel.WebResourcesViewModel.CaptureHighlightFromClipboardAsync(color).ConfigureAwait(true);
+        if (saved)
+        {
+            _quickMenuWindow?.Hide();
+        }
+    }
+
+    private async Task OpenWebResourcesAsync()
+    {
+        await _mainViewModel.WebResourcesViewModel.LoadAsync().ConfigureAwait(true);
+        _mainViewModel.OpenWebResourcesCommand.Execute(null);
+        OpenMainWindow();
+        _quickMenuWindow?.Hide();
+    }
+
     private void EnsureQuickMenuWindow()
     {
-        _quickMenuWindow ??= new QuickMenuWindow { DataContext = _quickMenuViewModel };
+        if (_quickMenuWindow is not null)
+        {
+            return;
+        }
+
+        _quickMenuWindow = new QuickMenuWindow { DataContext = _quickMenuViewModel };
+        _quickMenuWindow.MouseEnter += (_, _) => StopQuickMenuHoverTimer();
+        _quickMenuWindow.MouseLeave += (_, _) => ScheduleQuickMenuHoverClose();
     }
 
     private void EnsureQuickAddTaskWindow()
@@ -496,6 +681,10 @@ public sealed class WindowManagerService : IWindowManagerService
         _focusWarningWindow.AllowAppRequested += async (_, processName) =>
         {
             await _mainViewModel.FocusModeViewModel.AddApplicationToWhitelistAsync(processName).ConfigureAwait(true);
+        };
+        _focusWarningWindow.AllowPageOnceRequested += async (_, _) =>
+        {
+            await _mainViewModel.FocusModeViewModel.AllowCurrentBrowserPageOnceAsync().ConfigureAwait(true);
         };
     }
 
@@ -554,10 +743,7 @@ public sealed class WindowManagerService : IWindowManagerService
         _projectExplorerWindow = new SidePanelWindow
         {
             DataContext = _mainViewModel,
-            Width = 360,
-            Height = 620,
-            Left = 24,
-            Top = 240
+            Width = 430
         };
         _projectExplorerWindow.SetAppBarMode(false);
     }

@@ -1,6 +1,7 @@
 // Provides explorer tree state and helper actions.
 using System.Collections.ObjectModel;
 using System.IO;
+using ReachIT.Application.Contracts;
 using ReachIT.Domain.Enums;
 using ReachIT.Domain.Models;
 
@@ -191,6 +192,33 @@ public sealed class ProjectTreeViewModel : ViewModelBase
         }
     }
 
+    public void ApplyFileIcons(IFileIconService fileIconService)
+    {
+        ApplyFileIconsRecursive(Nodes, fileIconService);
+    }
+
+    public void AttachTasks(IEnumerable<TaskItem> tasks)
+    {
+        ClearTaskNodes(Nodes);
+
+        var tasksByPath = tasks
+            .Where(x => !string.IsNullOrWhiteSpace(x.AttachedFilePath))
+            .GroupBy(x => NormalizePath(x.AttachedFilePath), StringComparer.OrdinalIgnoreCase)
+            .Where(x => !string.IsNullOrWhiteSpace(x.Key))
+            .ToDictionary(x => x.Key!, x => x.OrderBy(t => t.Priority).ThenBy(t => t.Title).ToList(), StringComparer.OrdinalIgnoreCase);
+
+        AttachTasksRecursive(Nodes, tasksByPath);
+    }
+
+    private static void ApplyFileIconsRecursive(IEnumerable<ProjectTreeNode> nodes, IFileIconService fileIconService)
+    {
+        foreach (var node in nodes)
+        {
+            node.IconSource = fileIconService.GetIconPath(node);
+            ApplyFileIconsRecursive(node.Children, fileIconService);
+        }
+    }
+
     private static void CollapseRecursive(ProjectTreeNode node)
     {
         node.IsExpanded = false;
@@ -198,6 +226,58 @@ public sealed class ProjectTreeViewModel : ViewModelBase
         {
             CollapseRecursive(child);
         }
+    }
+
+    private static void ClearTaskNodes(IEnumerable<ProjectTreeNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            for (var i = node.Children.Count - 1; i >= 0; i--)
+            {
+                if (node.Children[i].NodeType == ProjectTreeNodeType.Task)
+                {
+                    node.Children.RemoveAt(i);
+                }
+            }
+
+            node.AttachedTaskCount = 0;
+            ClearTaskNodes(node.Children);
+        }
+    }
+
+    private static void AttachTasksRecursive(IEnumerable<ProjectTreeNode> nodes, IReadOnlyDictionary<string, List<TaskItem>> tasksByPath)
+    {
+        foreach (var node in nodes)
+        {
+            var key = NormalizePath(node.FullPath);
+            if (!node.IsDirectory && !string.IsNullOrWhiteSpace(key) && tasksByPath.TryGetValue(key, out var tasks))
+            {
+                node.AttachedTaskCount = tasks.Count;
+                foreach (var task in tasks)
+                {
+                    node.Children.Add(CreateTaskNode(node, task));
+                }
+            }
+
+            AttachTasksRecursive(node.Children, tasksByPath);
+        }
+    }
+
+    private static ProjectTreeNode CreateTaskNode(ProjectTreeNode parent, TaskItem task)
+    {
+        return new ProjectTreeNode
+        {
+            Id = Guid.NewGuid(),
+            ProjectMetaId = parent.ProjectMetaId,
+            ParentId = parent.Id,
+            Name = task.Title,
+            FullPath = $"{parent.FullPath}#task:{task.Id:N}",
+            RelativePath = task.Title,
+            NodeType = ProjectTreeNodeType.Task,
+            IsDirectory = false,
+            IsExternal = false,
+            AttachedTaskId = task.Id
+        };
     }
 
     private HashSet<string> CaptureExpandedNodeKeys()

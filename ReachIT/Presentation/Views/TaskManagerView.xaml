@@ -4,129 +4,407 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks">
     <UserControl.Resources>
-        <HierarchicalDataTemplate x:Key="TaskTreeTemplate" ItemsSource="{Binding Subtasks}">
-            <Grid MinHeight="54" Margin="0,2">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="92" />
-                    <ColumnDefinition Width="128" />
-                    <ColumnDefinition Width="170" />
-                    <ColumnDefinition Width="96" />
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <iconPacks:PackIconMaterial Kind="FileTree"
-                                                Width="18"
-                                                Height="18"
-                                                Margin="0,0,10,0"
-                                                Foreground="{StaticResource SkyAquaBrush}" />
-                    <StackPanel>
-                        <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding Description}"
-                                   Style="{StaticResource ReachItMutedTextStyle}"
-                                   FontSize="12"
-                                   TextTrimming="CharacterEllipsis"
-                                   TextWrapping="NoWrap"
-                                   MaxWidth="620" />
-                    </StackPanel>
-                </StackPanel>
-
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="Черга" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
-                    <TextBlock Text="{Binding QueuePositionText}" Style="{StaticResource ReachItLabelTextStyle}" />
-                </StackPanel>
-
-                <Border Grid.Column="2"
-                        Background="#18243A"
-                        BorderBrush="#2D3C5C"
-                        CornerRadius="7"
-                        Padding="8,3"
-                        Margin="0,0,10,0"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Status}" Foreground="{StaticResource SkyAquaBrush}" FontWeight="SemiBold" />
-                </Border>
-
-                <StackPanel Grid.Column="3" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding DueDateUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
-                               Style="{StaticResource ReachItMutedTextStyle}" />
-                    <TextBlock Text="{Binding CompletionAuditText}"
-                               Style="{StaticResource ReachItMutedTextStyle}"
-                               FontSize="11" />
-                </StackPanel>
-
-                <CheckBox Grid.Column="4"
-                          IsChecked="{Binding IsCompleted, Mode=OneWay}"
-                          Command="{Binding DataContext.MarkTaskCompletedCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
-                          CommandParameter="{Binding}"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center"
-                          ToolTip="Закрити задачу і зберегти час виконання.">
-                    <CheckBox.Style>
-                        <Style TargetType="{x:Type CheckBox}" BasedOn="{StaticResource {x:Type CheckBox}}">
+        <DataTemplate x:Key="TaskCanvasNodeTemplate">
+            <Button Command="{Binding DataContext.SelectTaskCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                    CommandParameter="{Binding Task}"
+                    Width="{Binding Width}"
+                    Height="{Binding Height}"
+                    Padding="0"
+                    Margin="0"
+                    ToolTip="Open task details.">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <ContentPresenter />
+                    </ControlTemplate>
+                </Button.Template>
+                <Border Padding="13"
+                        SnapsToDevicePixels="True">
+                    <Border.Style>
+                        <Style TargetType="{x:Type Border}">
+                            <Setter Property="Background" Value="#121C2F" />
+                            <Setter Property="BorderBrush" Value="#233A5D" />
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Setter Property="CornerRadius" Value="8" />
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding DataContext.IsClassicDiagramStyle, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True">
+                                    <Setter Property="Background" Value="White" />
+                                    <Setter Property="BorderBrush" Value="#111111" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsProjectRoot}" Value="True">
+                                    <Setter Property="Background" Value="#1B304F" />
+                                    <Setter Property="BorderBrush" Value="{StaticResource SkyAquaBrush}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="Background" Value="#1B304F" />
+                                    <Setter Property="BorderBrush" Value="{StaticResource SkyAquaBrush}" />
+                                </DataTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsProjectRoot}" Value="True" />
+                                        <Condition Binding="{Binding DataContext.IsClassicDiagramStyle, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True" />
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Background" Value="#F2F2F2" />
+                                    <Setter Property="BorderBrush" Value="#111111" />
+                                </MultiDataTrigger>
                                 <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                    <Setter Property="IsEnabled" Value="False" />
-                                    <Setter Property="Opacity" Value="0.9" />
+                                    <Setter Property="Opacity" Value="0.68" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </CheckBox.Style>
-                    <CheckBox.LayoutTransform>
-                        <ScaleTransform ScaleX="1.7" ScaleY="1.7" />
-                    </CheckBox.LayoutTransform>
-                </CheckBox>
-            </Grid>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Title}"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       TextWrapping="NoWrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                        <Setter Property="Foreground" Value="{StaticResource ReachItInkBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding DataContext.IsClassicDiagramStyle, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True">
+                                                <Setter Property="Foreground" Value="#111111" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Border Grid.Column="1"
+                                    Padding="7,2"
+                                    Margin="8,0,0,0">
+                                <Border.Style>
+                                    <Style TargetType="{x:Type Border}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Setter Property="Background" Value="#10263A" />
+                                        <Setter Property="BorderBrush" Value="#2B79A1" />
+                                        <Setter Property="BorderThickness" Value="1" />
+                                        <Setter Property="CornerRadius" Value="7" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsProjectRoot}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding DataContext.IsClassicDiagramStyle, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True">
+                                                <Setter Property="Background" Value="#F8F8F8" />
+                                                <Setter Property="BorderBrush" Value="#111111" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock Text="{Binding QueuePositionText}"
+                                           Foreground="{StaticResource SkyAquaBrush}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold" />
+                            </Border>
+                        </Grid>
+
+                        <TextBlock Grid.Row="1"
+                                   Text="{Binding Description}"
+                                   Style="{StaticResource ReachItMutedTextStyle}"
+                                   FontSize="12"
+                                   MaxHeight="38"
+                                   TextTrimming="CharacterEllipsis"
+                                   Margin="0,6,0,6" />
+
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Border Background="#10263A"
+                                    BorderBrush="#2B79A1"
+                                    BorderThickness="1"
+                                    CornerRadius="7"
+                                    Padding="8,3"
+                                    HorizontalAlignment="Left">
+                                <TextBlock Text="{Binding Status}"
+                                           Foreground="{StaticResource SkyAquaBrush}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="NoWrap" />
+                            </Border>
+                            <CheckBox Grid.Column="1"
+                                      IsChecked="{Binding IsCompleted, Mode=OneWay}"
+                                      Command="{Binding DataContext.MarkTaskCompletedCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                      CommandParameter="{Binding Task}"
+                                      Margin="8,0,0,0"
+                                      VerticalAlignment="Center"
+                                      ToolTip="Close this task.">
+                                <CheckBox.Style>
+                                    <Style TargetType="{x:Type CheckBox}" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                <Setter Property="IsEnabled" Value="False" />
+                                                <Setter Property="Opacity" Value="0.9" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsProjectRoot}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </CheckBox.Style>
+                            </CheckBox>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Button>
+        </DataTemplate>
+
+        <DataTemplate x:Key="TaskCanvasConnectorTemplate">
+            <Canvas>
+                <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X1}" Y2="{Binding MidY}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                    <Line.Style>
+                        <Style TargetType="{x:Type Line}">
+                            <Setter Property="Stroke" Value="#365B84" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DataContext.IsClassicDiagramStyle, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True">
+                                    <Setter Property="Stroke" Value="#111111" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Line.Style>
+                </Line>
+                <Line X1="{Binding X1}" Y1="{Binding MidY}" X2="{Binding X2}" Y2="{Binding MidY}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                    <Line.Style>
+                        <Style TargetType="{x:Type Line}">
+                            <Setter Property="Stroke" Value="#365B84" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DataContext.IsClassicDiagramStyle, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True">
+                                    <Setter Property="Stroke" Value="#111111" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Line.Style>
+                </Line>
+                <Line X1="{Binding X2}" Y1="{Binding MidY}" X2="{Binding X2}" Y2="{Binding Y2}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                    <Line.Style>
+                        <Style TargetType="{x:Type Line}">
+                            <Setter Property="Stroke" Value="#365B84" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DataContext.IsClassicDiagramStyle, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True">
+                                    <Setter Property="Stroke" Value="#111111" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Line.Style>
+                </Line>
+            </Canvas>
+        </DataTemplate>
+
+        <HierarchicalDataTemplate x:Key="TaskTreeTemplate" ItemsSource="{Binding Subtasks}">
+            <Border Style="{StaticResource ReachItWorkItemRowStyle}">
+                <Grid MinHeight="66">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="320" />
+                        <ColumnDefinition Width="112" />
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="56" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid Grid.Column="0" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Width="32"
+                                Height="32"
+                                CornerRadius="8"
+                                Background="#1A2B46"
+                                BorderBrush="#31547A"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center">
+                            <iconPacks:PackIconMaterial Kind="FileTree"
+                                                        Width="18"
+                                                        Height="18"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Foreground="{StaticResource SkyAquaBrush}" />
+                        </Border>
+
+                        <Grid Grid.Column="1" VerticalAlignment="Center">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Title}"
+                                           FontSize="15"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"
+                                           TextWrapping="NoWrap" />
+                                <Border Background="#10263A"
+                                        BorderBrush="#2B79A1"
+                                        BorderThickness="1"
+                                        CornerRadius="7"
+                                        Padding="7,2"
+                                        Margin="10,0,0,0"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding QueuePositionText}"
+                                               Foreground="{StaticResource SkyAquaBrush}"
+                                               FontSize="11"
+                                               FontWeight="SemiBold" />
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Grid.Row="1"
+                                       Text="{Binding Description}"
+                                       Style="{StaticResource ReachItMutedTextStyle}"
+                                       FontSize="12"
+                                       TextTrimming="CharacterEllipsis"
+                                       TextWrapping="NoWrap"
+                                       Margin="0,3,0,0" />
+                        </Grid>
+                    </Grid>
+
+                    <Border Grid.Column="1"
+                            Background="#10263A"
+                            BorderBrush="#2B79A1"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="10,5"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Status}"
+                                   Foreground="{StaticResource SkyAquaBrush}"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="NoWrap" />
+                    </Border>
+
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding DueDateUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                   Foreground="#B8D7FF"
+                                   TextTrimming="CharacterEllipsis"
+                                   TextWrapping="NoWrap" />
+                        <TextBlock Text="{Binding CompletionAuditText}"
+                                   Style="{StaticResource ReachItMutedTextStyle}"
+                                   FontSize="11"
+                                   TextTrimming="CharacterEllipsis"
+                                   TextWrapping="NoWrap" />
+                    </StackPanel>
+
+                    <CheckBox Grid.Column="3"
+                              IsChecked="{Binding IsCompleted, Mode=OneWay}"
+                              Command="{Binding DataContext.MarkTaskCompletedCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
+                              CommandParameter="{Binding}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              ToolTip="Закрити задачу і зберегти час виконання.">
+                        <CheckBox.Style>
+                            <Style TargetType="{x:Type CheckBox}" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False" />
+                                        <Setter Property="Opacity" Value="0.9" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </CheckBox.Style>
+                        <CheckBox.LayoutTransform>
+                            <ScaleTransform ScaleX="1.35" ScaleY="1.35" />
+                        </CheckBox.LayoutTransform>
+                    </CheckBox>
+                </Grid>
+            </Border>
         </HierarchicalDataTemplate>
     </UserControl.Resources>
 
     <Grid Margin="0,0,0,14">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" MinWidth="640" />
-            <ColumnDefinition Width="340" />
+            <ColumnDefinition Width="*" MinWidth="720" />
+            <ColumnDefinition Width="18" />
+            <ColumnDefinition Width="430" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Padding="0" Margin="0,0,14,0" CornerRadius="12" ClipToBounds="True">
+        <Border Grid.Column="0"
+                ClipToBounds="True"
+                Style="{StaticResource ReachItPanelStyle}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" Background="#18243A" BorderThickness="0" CornerRadius="12,12,0,0" Padding="16,14">
+                <Border Grid.Row="0" Style="{StaticResource ReachItPanelHeaderStyle}">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <iconPacks:PackIconMaterial Kind="FileTree"
-                                                        Width="26"
-                                                        Height="26"
-                                                        Margin="0,1,10,0"
+                                                        Width="28"
+                                                        Height="28"
+                                                        Margin="0,2,12,0"
                                                         Foreground="{StaticResource SkyAquaBrush}" />
                             <StackPanel>
-                                <TextBlock Text="{DynamicResource Tasks.ManagerTitle}" FontSize="22" FontWeight="Bold" />
-                                <TextBlock Text="{DynamicResource Tasks.ManagerSubtitle}" Style="{StaticResource ReachItMutedTextStyle}" />
+                                <TextBlock Text="{DynamicResource Tasks.ManagerTitle}" FontSize="23" FontWeight="Bold" />
+                                <TextBlock Text="{DynamicResource Tasks.ManagerSubtitle}"
+                                           Style="{StaticResource ReachItMutedTextStyle}"
+                                           TextTrimming="CharacterEllipsis"
+                                           TextWrapping="NoWrap"
+                                           MaxWidth="620" />
                             </StackPanel>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Grid Grid.Row="1" Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" MinWidth="180" />
+                            </Grid.ColumnDefinitions>
+                            <Button Command="{Binding SetListViewCommand}"
+                                    Style="{StaticResource ReachItIconButtonStyle}"
+                                    ToolTip="List view.">
+                                <iconPacks:PackIconMaterial Kind="FormatListBulleted"
+                                                            Width="18"
+                                                            Height="18" />
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Command="{Binding SetCanvasViewCommand}"
+                                    Style="{StaticResource ReachItIconButtonStyle}"
+                                    ToolTip="Canvas diagram view.">
+                                <iconPacks:PackIconMaterial Kind="FileTree"
+                                                            Width="18"
+                                                            Height="18" />
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Click="ExportDiagram_Click"
+                                    Style="{StaticResource ReachItIconButtonStyle}"
+                                    ToolTip="Export diagram.">
+                                <iconPacks:PackIconMaterial Kind="Export"
+                                                            Width="18"
+                                                            Height="18" />
+                            </Button>
                             <CheckBox Content="{DynamicResource Tasks.ActiveOnly}"
+                                      Grid.Column="3"
                                       IsChecked="{Binding ShowActiveOnly}"
                                       VerticalAlignment="Center"
-                                      Margin="0,0,14,0"
+                                      Margin="0,0,18,0"
                                       ToolTip="{DynamicResource Tasks.ActiveOnlyTip}" />
-                            <iconPacks:PackIconMaterial Kind="Magnify"
-                                                        Width="18"
-                                                        Height="18"
-                                                        Margin="0,8,7,0"
+                            <iconPacks:PackIconMaterial Grid.Column="4"
+                                                        Kind="Magnify"
+                                                        Width="20"
+                                                        Height="20"
+                                                        Margin="0,8,8,0"
                                                         Foreground="{StaticResource SkyAquaBrush}" />
-                            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                     Width="230"
+                            <TextBox Grid.Column="5"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                      ToolTip="Filter tasks by title or description." />
-                        </StackPanel>
+                        </Grid>
                     </Grid>
                 </Border>
 
@@ -143,131 +421,331 @@
                               ItemTemplate="{StaticResource TaskTreeTemplate}"
                               SelectedItemChanged="TaskTree_SelectedItemChanged"
                               BorderThickness="0"
-                              Padding="14"
-                              Background="{StaticResource ReachItSoftSurfaceBrush}">
+                              Padding="18"
+                              Background="{StaticResource ReachItSoftSurfaceBrush}"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <TreeView.Style>
+                            <Style TargetType="{x:Type TreeView}" BasedOn="{StaticResource {x:Type TreeView}}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsListView}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TreeView.Style>
                         <TreeView.Resources>
                             <Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource {x:Type TreeViewItem}}">
                                 <Setter Property="IsExpanded" Value="True" />
-                                <Setter Property="Margin" Value="0,0,0,4" />
+                                <Setter Property="Margin" Value="0" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             </Style>
                         </TreeView.Resources>
                     </TreeView>
+
+                    <Grid Background="{StaticResource ReachItSoftSurfaceBrush}">
+                        <Grid.Style>
+                            <Style TargetType="{x:Type Grid}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsCanvasView}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <Border x:Name="TaskDiagramViewport"
+                                Margin="18"
+                                ClipToBounds="True"
+                                Focusable="True"
+                                Cursor="Hand"
+                                PreviewMouseWheel="TaskDiagramViewport_PreviewMouseWheel"
+                                MouseLeftButtonDown="TaskDiagramViewport_MouseLeftButtonDown"
+                                MouseLeftButtonUp="TaskDiagramViewport_MouseLeftButtonUp"
+                                MouseMove="TaskDiagramViewport_MouseMove">
+                            <Border.Style>
+                                <Style TargetType="{x:Type Border}">
+                                    <Setter Property="Background">
+                                        <Setter.Value>
+                                            <DrawingBrush TileMode="Tile"
+                                                          Viewport="0,0,24,24"
+                                                          ViewportUnits="Absolute"
+                                                          Stretch="None">
+                                                <DrawingBrush.Drawing>
+                                                    <DrawingGroup>
+                                                        <GeometryDrawing Brush="#101827">
+                                                            <GeometryDrawing.Geometry>
+                                                                <RectangleGeometry Rect="0,0,24,24" />
+                                                            </GeometryDrawing.Geometry>
+                                                        </GeometryDrawing>
+                                                        <GeometryDrawing Brush="{x:Null}">
+                                                            <GeometryDrawing.Pen>
+                                                                <Pen Brush="#182841" Thickness="1" />
+                                                            </GeometryDrawing.Pen>
+                                                            <GeometryDrawing.Geometry>
+                                                                <GeometryGroup>
+                                                                    <LineGeometry StartPoint="24,0" EndPoint="24,24" />
+                                                                    <LineGeometry StartPoint="0,24" EndPoint="24,24" />
+                                                                </GeometryGroup>
+                                                            </GeometryDrawing.Geometry>
+                                                        </GeometryDrawing>
+                                                    </DrawingGroup>
+                                                </DrawingBrush.Drawing>
+                                            </DrawingBrush>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Setter Property="BorderBrush" Value="#223758" />
+                                    <Setter Property="BorderThickness" Value="1" />
+                                    <Setter Property="CornerRadius" Value="8" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsClassicDiagramStyle}" Value="True">
+                                            <Setter Property="Background">
+                                                <Setter.Value>
+                                                    <DrawingBrush TileMode="Tile"
+                                                                  Viewport="0,0,24,24"
+                                                                  ViewportUnits="Absolute"
+                                                                  Stretch="None">
+                                                        <DrawingBrush.Drawing>
+                                                            <DrawingGroup>
+                                                                <GeometryDrawing Brush="#FFFFFF">
+                                                                    <GeometryDrawing.Geometry>
+                                                                        <RectangleGeometry Rect="0,0,24,24" />
+                                                                    </GeometryDrawing.Geometry>
+                                                                </GeometryDrawing>
+                                                        <GeometryDrawing Brush="{x:Null}">
+                                                            <GeometryDrawing.Pen>
+                                                                <Pen Brush="#EFEFEF" Thickness="1" />
+                                                            </GeometryDrawing.Pen>
+                                                            <GeometryDrawing.Geometry>
+                                                                <GeometryGroup>
+                                                                    <LineGeometry StartPoint="24,0" EndPoint="24,24" />
+                                                                            <LineGeometry StartPoint="0,24" EndPoint="24,24" />
+                                                                        </GeometryGroup>
+                                                                    </GeometryDrawing.Geometry>
+                                                                </GeometryDrawing>
+                                                            </DrawingGroup>
+                                                        </DrawingBrush.Drawing>
+                                                    </DrawingBrush>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Setter Property="BorderBrush" Value="#111111" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Canvas x:Name="TaskDiagramCanvas"
+                                    Width="{Binding CanvasWidth}"
+                                    Height="{Binding CanvasHeight}">
+                                <Canvas.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform x:Name="TaskDiagramScaleTransform"
+                                                        ScaleX="1"
+                                                        ScaleY="1" />
+                                        <TranslateTransform x:Name="TaskDiagramTranslateTransform"
+                                                            X="0"
+                                                            Y="0" />
+                                    </TransformGroup>
+                                </Canvas.RenderTransform>
+                                <Canvas.Style>
+                                    <Style TargetType="{x:Type Canvas}">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsClassicDiagramStyle}" Value="True">
+                                                <Setter Property="Background" Value="Transparent" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Canvas.Style>
+                                <ItemsControl ItemsSource="{Binding CanvasConnectors}"
+                                              ItemTemplate="{StaticResource TaskCanvasConnectorTemplate}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+
+                                <ItemsControl ItemsSource="{Binding CanvasTasks}"
+                                              ItemTemplate="{StaticResource TaskCanvasNodeTemplate}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="{x:Type ContentPresenter}">
+                                            <Setter Property="Canvas.Left" Value="{Binding Left}" />
+                                            <Setter Property="Canvas.Top" Value="{Binding Top}" />
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                </ItemsControl>
+                            </Canvas>
+                        </Border>
+                    </Grid>
                 </Grid>
             </Grid>
         </Border>
 
-        <Border Grid.Column="1" Style="{StaticResource ReachItCardStyle}" Padding="14">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Border Grid.Column="2"
+                Style="{StaticResource ReachItCardStyle}"
+                Padding="18"
+                CornerRadius="12">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <Border Background="#101827" BorderBrush="#33415E" CornerRadius="8" Padding="10,8" Margin="0,0,8,0">
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource ReachItMetricCardStyle}">
                             <StackPanel>
                                 <TextBlock Text="{DynamicResource Tasks.Total}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
-                                <TextBlock Text="{Binding Tasks.Count}" FontSize="20" FontWeight="Bold" />
+                                <TextBlock Text="{Binding Tasks.Count}" FontSize="21" FontWeight="Bold" />
                             </StackPanel>
                         </Border>
-                        <Border Background="#101827" BorderBrush="#33415E" CornerRadius="8" Padding="10,8" Margin="0,0,8,0">
+                        <Border Grid.Column="2" Style="{StaticResource ReachItMetricCardStyle}">
                             <StackPanel>
                                 <TextBlock Text="{DynamicResource Tasks.DueTodayCount}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
-                                <TextBlock Text="{Binding DueTodayCount}" FontSize="20" FontWeight="Bold" />
+                                <TextBlock Text="{Binding DueTodayCount}" FontSize="21" FontWeight="Bold" />
                             </StackPanel>
                         </Border>
-                        <Border Background="#101827" BorderBrush="#33415E" CornerRadius="8" Padding="10,8">
+                        <Border Grid.Column="4" Style="{StaticResource ReachItMetricCardStyle}">
                             <StackPanel>
                                 <TextBlock Text="{DynamicResource Tasks.OverdueCount}" Style="{StaticResource ReachItMutedTextStyle}" FontSize="11" />
-                                <TextBlock Text="{Binding OverdueTasksCount}" FontSize="20" FontWeight="Bold" />
+                                <TextBlock Text="{Binding OverdueTasksCount}" FontSize="21" FontWeight="Bold" />
                             </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <WrapPanel Margin="0,0,0,10">
-                        <Button Command="{Binding AddTaskCommand}" ToolTip="Create a new task.">
-                            <StackPanel Orientation="Horizontal">
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{Binding AddTaskCommand}" ToolTip="Create a new task.">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <iconPacks:PackIconMaterial Kind="PlusCircle" Width="16" Height="16" Margin="0,0,8,0" />
                                 <TextBlock Text="{DynamicResource Tasks.Add}" />
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding SaveAllCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Save every task marked as unsaved.">
-                            <StackPanel Orientation="Horizontal">
+                        <Button Grid.Column="2" Command="{Binding SaveAllCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Save every task marked as unsaved.">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <iconPacks:PackIconMaterial Kind="ContentSave" Width="16" Height="16" Margin="0,0,8,0" />
                                 <TextBlock Text="{DynamicResource Tasks.SaveAll}" />
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding DeleteTaskCommand}" Style="{StaticResource ReachItDangerButtonStyle}" ToolTip="Delete the selected task.">
-                            <StackPanel Orientation="Horizontal">
-                                <iconPacks:PackIconMaterial Kind="Delete" Width="16" Height="16" Margin="0,0,8,0" />
-                                <TextBlock Text="{DynamicResource Tasks.DeleteSelected}" />
-                            </StackPanel>
-                        </Button>
-                    </WrapPanel>
+                    </Grid>
 
-                    <Separator Margin="0,0,0,12" />
+                    <Button Command="{Binding DeleteTaskCommand}"
+                            Style="{StaticResource ReachItDangerButtonStyle}"
+                            Margin="0,0,0,16"
+                            ToolTip="Delete the selected task.">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <iconPacks:PackIconMaterial Kind="Delete" Width="16" Height="16" Margin="0,0,8,0" />
+                            <TextBlock Text="{DynamicResource Tasks.DeleteSelected}" />
+                        </StackPanel>
+                    </Button>
+
+                    <Separator Margin="0,0,0,16" />
 
                     <StackPanel IsEnabled="{Binding IsTaskSelected}"
                                 ToolTip="{DynamicResource Tasks.SelectTip}"
                                 ToolTipService.ShowOnDisabled="True">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <iconPacks:PackIconMaterial Kind="ClipboardText" Width="22" Height="22" Margin="0,1,9,0" Foreground="{StaticResource SkyAquaBrush}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <iconPacks:PackIconMaterial Kind="ClipboardText"
+                                                        Width="24"
+                                                        Height="24"
+                                                        Margin="0,1,10,0"
+                                                        Foreground="{StaticResource SkyAquaBrush}" />
                             <TextBlock Text="{DynamicResource Tasks.Details}" Style="{StaticResource ReachItSectionTitleTextStyle}" Margin="0" />
                         </StackPanel>
 
                         <TextBlock Text="{DynamicResource Tasks.Title}" Style="{StaticResource ReachItLabelTextStyle}" />
-                        <TextBox Text="{Binding EditTitle, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,10" ToolTip="Task title." />
+                        <TextBox Text="{Binding EditTitle, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,3,0,12"
+                                 ToolTip="Task title." />
 
                         <TextBlock Text="{DynamicResource Tasks.Description}" Style="{StaticResource ReachItLabelTextStyle}" />
                         <TextBox Text="{Binding EditDescription, UpdateSourceTrigger=PropertyChanged}"
                                  AcceptsReturn="True"
-                                 MinHeight="96"
+                                 MinHeight="118"
                                  TextWrapping="Wrap"
-                                 Margin="0,2,0,10"
+                                 Margin="0,3,0,12"
                                  ToolTip="Notes or details for this task." />
 
-                        <Grid Margin="0,0,0,10">
+                        <Grid Margin="0,0,0,12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="12" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="Позиція в черзі" Style="{StaticResource ReachItLabelTextStyle}" />
-                                <TextBox Text="{Binding EditPriority, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,0" ToolTip="Lower queue numbers are handled first."/>
+                                <TextBox Text="{Binding EditPriority, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,3,0,0"
+                                         ToolTip="Lower queue numbers are handled first."/>
                             </StackPanel>
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="{DynamicResource Tasks.Status}" Style="{StaticResource ReachItLabelTextStyle}" />
-                                <TextBox Text="{Binding EditStatus, Mode=OneWay}" IsReadOnly="True" Margin="0,2,0,0" ToolTip="Status is tracked automatically from the task queue."/>
+                                <TextBox Text="{Binding EditStatus, Mode=OneWay}"
+                                         IsReadOnly="True"
+                                         Margin="0,3,0,0"
+                                         ToolTip="Status is tracked automatically from the task queue."/>
                             </StackPanel>
                         </Grid>
 
                         <TextBlock Text="{DynamicResource Tasks.Deadline}" Style="{StaticResource ReachItLabelTextStyle}" />
-                        <DatePicker SelectedDate="{Binding EditDeadlineDate}" Margin="0,2,0,8" ToolTip="Pick the task deadline." />
-                        <CheckBox Content="{DynamicResource Tasks.Completed}" IsChecked="{Binding EditIsCompleted}" Margin="0,0,0,10" ToolTip="Mark this task as completed." />
+                        <DatePicker SelectedDate="{Binding EditDeadlineDate}"
+                                    Margin="0,3,0,10"
+                                    ToolTip="Pick the task deadline." />
+                        <CheckBox Content="{DynamicResource Tasks.Completed}"
+                                  IsChecked="{Binding EditIsCompleted}"
+                                  Margin="0,0,0,12"
+                                  ToolTip="Mark this task as completed." />
 
-                        <WrapPanel Margin="0,0,0,10">
-                            <Button Content="{DynamicResource Tasks.Today}" Command="{Binding SetDeadlineTodayCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Set deadline to today." />
-                            <Button Content="{DynamicResource Tasks.Tomorrow}" Command="{Binding SetDeadlineTomorrowCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Set deadline to tomorrow." />
-                            <Button Content="{DynamicResource Tasks.Clear}" Command="{Binding ClearDeadlineCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Remove the deadline." />
-                        </WrapPanel>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="{DynamicResource Tasks.Today}" Command="{Binding SetDeadlineTodayCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Set deadline to today." />
+                            <Button Grid.Column="2" Content="{DynamicResource Tasks.Tomorrow}" Command="{Binding SetDeadlineTomorrowCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Set deadline to tomorrow." />
+                            <Button Grid.Column="4" Content="{DynamicResource Tasks.Clear}" Command="{Binding ClearDeadlineCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Remove the deadline." />
+                        </Grid>
 
                         <Button Command="{Binding EditTaskCommand}" ToolTip="Apply edits to the selected task. Use Save All to write unsaved tasks.">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <iconPacks:PackIconMaterial Kind="CheckCircleOutline" Width="16" Height="16" Margin="0,0,8,0" />
+                                <iconPacks:PackIconMaterial Kind="CheckCircleOutline" Width="17" Height="17" Margin="0,0,8,0" />
                                 <TextBlock Text="{DynamicResource Tasks.Apply}" />
                             </StackPanel>
                         </Button>
                         <Button Command="{Binding AddSubtaskCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Create a child task under the selected task.">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <iconPacks:PackIconMaterial Kind="FileTree" Width="16" Height="16" Margin="0,0,8,0" />
+                                <iconPacks:PackIconMaterial Kind="FileTree" Width="17" Height="17" Margin="0,0,8,0" />
                                 <TextBlock Text="{DynamicResource Tasks.AddSubtask}" />
                             </StackPanel>
                         </Button>
                         <Button Command="{Binding MarkCompletedCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Mark the selected task as completed.">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <iconPacks:PackIconMaterial Kind="Check" Width="16" Height="16" Margin="0,0,8,0" />
+                                <iconPacks:PackIconMaterial Kind="Check" Width="17" Height="17" Margin="0,0,8,0" />
                                 <TextBlock Text="{DynamicResource Tasks.MarkCompleted}" />
                             </StackPanel>
                         </Button>
 
-                        <TextBlock Text="{Binding DeadlineValidationMessage}" Foreground="{StaticResource NeonPinkBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                        <TextBlock Text="{Binding DeadlineValidationMessage}"
+                                   Foreground="{StaticResource NeonPinkBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,0,0"/>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>

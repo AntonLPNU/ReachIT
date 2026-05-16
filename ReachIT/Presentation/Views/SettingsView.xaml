@@ -51,7 +51,7 @@
                                 CornerRadius="8"
                                 Padding="12"
                                 Margin="0,14,0,0"
-                                Visibility="{Binding IsDeveloperAccount, Converter={StaticResource BoolToVisibilityConverter}}">
+                                Visibility="{Binding IsDeveloperPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
                             <StackPanel>
                                 <TextBlock Text="Developer test account" Style="{StaticResource ReachItLabelTextStyle}" />
                                 <Grid Margin="0,8,0,10">

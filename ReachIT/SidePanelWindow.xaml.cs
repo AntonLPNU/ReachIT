@@ -17,6 +17,7 @@ public partial class SidePanelWindow : Window
     private bool _closeRequested;
 
     private const double PinnedWidth = 420;
+    private const double FloatingWidth = 430;
     private const int WmDisplayChange = 0x007E;
     private const int WmSettingChange = 0x001A;
     private const int WmDpiChanged = 0x02E0;
@@ -49,6 +50,8 @@ public partial class SidePanelWindow : Window
     public void SetAppBarMode(bool enabled)
     {
         IsAppBarModeEnabled = enabled;
+        MinWidth = Math.Max(MinWidth, 320);
+        MinHeight = Math.Max(MinHeight, 360);
 
         if (enabled)
         {
@@ -57,7 +60,23 @@ public partial class SidePanelWindow : Window
             return;
         }
 
-        ResizeMode = ResizeMode.CanResizeWithGrip;
+        ResizeMode = ResizeMode.NoResize;
+        ApplyFloatingLeftLayout();
+    }
+
+    public void ApplyFloatingLeftLayout()
+    {
+        if (IsAppBarModeEnabled)
+        {
+            ApplyPinnedLayout();
+            return;
+        }
+
+        var area = SystemParameters.WorkArea;
+        Width = Math.Min(FloatingWidth, Math.Max(320, area.Width - 28));
+        Height = Math.Max(MinHeight, area.Height - 28);
+        Left = area.Left + 14;
+        Top = area.Top + 14;
     }
 
     public void ForceClose()
@@ -131,6 +150,17 @@ public partial class SidePanelWindow : Window
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
         Hide();
+    }
+
+    private void TaskBadge_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is DependencyObject source && FindVisualParent<TreeViewItem>(source) is { } item)
+        {
+            item.IsExpanded = !item.IsExpanded;
+            item.IsSelected = true;
+        }
+
+        e.Handled = true;
     }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)

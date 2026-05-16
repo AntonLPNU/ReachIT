@@ -151,6 +151,53 @@
         <Setter Property="BorderBrush" Value="#80FFFFFF" />
     </Style>
 
+    <Style x:Key="ReachItPanelStyle" TargetType="{x:Type Border}">
+        <Setter Property="BorderBrush" Value="{StaticResource ReachItBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Background" Value="{StaticResource ReachItSoftSurfaceBrush}" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <Style x:Key="ReachItPanelHeaderStyle" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="#18243A" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="12,12,0,0" />
+        <Setter Property="Padding" Value="18,14" />
+    </Style>
+
+    <Style x:Key="ReachItMetricCardStyle" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="#101827" />
+        <Setter Property="BorderBrush" Value="#2B3E60" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12,9" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <Style x:Key="ReachItWorkItemRowStyle" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="#121C2F" />
+        <Setter Property="BorderBrush" Value="#233A5D" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="14,12" />
+        <Setter Property="Margin" Value="0,0,10,10" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True">
+                <Setter Property="Background" Value="#172640" />
+                <Setter Property="BorderBrush" Value="#3A5F8A" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True">
+                <Setter Property="Background" Value="#1B304F" />
+                <Setter Property="BorderBrush" Value="{StaticResource SkyAquaBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                <Setter Property="Opacity" Value="0.68" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <Style TargetType="{x:Type Button}">
         <Setter Property="MinHeight" Value="34" />
         <Setter Property="Padding" Value="14,7" />
@@ -219,6 +266,12 @@
         <Setter Property="Padding" Value="10,4" />
         <Setter Property="FontSize" Value="12" />
         <Setter Property="Margin" Value="0,0,5,4" />
+    </Style>
+
+    <Style x:Key="ReachItActionButtonStyle" BasedOn="{StaticResource ReachItSecondaryButtonStyle}" TargetType="{x:Type Button}">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Padding" Value="12,9" />
+        <Setter Property="Margin" Value="0,0,0,7" />
     </Style>
 
     <Style x:Key="ReachItIconButtonStyle" BasedOn="{StaticResource ReachItSecondaryButtonStyle}" TargetType="{x:Type Button}">
@@ -654,6 +707,108 @@
         <Setter Property="Height" Value="10" />
         <Setter Property="Foreground" Value="{StaticResource SkyAquaBrush}" />
         <Setter Property="Background" Value="#202A3F" />
+    </Style>
+
+    <Style x:Key="ReachItScrollLineButtonStyle" TargetType="{x:Type primitives:RepeatButton}">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type primitives:RepeatButton}">
+                    <Border Background="Transparent" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ReachItScrollThumbStyle" TargetType="{x:Type primitives:Thumb}">
+        <Setter Property="MinWidth" Value="10" />
+        <Setter Property="MinHeight" Value="96" />
+        <Setter Property="Background" Value="#365B84" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type primitives:Thumb}">
+                    <Border x:Name="ThumbChrome"
+                            MinWidth="{TemplateBinding MinWidth}"
+                            MinHeight="{TemplateBinding MinHeight}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="#4CC9F0"
+                            BorderThickness="1"
+                            CornerRadius="5"
+                            Margin="2" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ThumbChrome" Property="Background" Value="#4895EF" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="ThumbChrome" Property="Background" Value="#4CC9F0" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="{x:Type ScrollBar}">
+        <Setter Property="Width" Value="16" />
+        <Setter Property="Background" Value="#101B2E" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ScrollBar}">
+                    <Grid Width="{TemplateBinding Width}" Background="Transparent" SnapsToDevicePixels="True">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="#223758"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Margin="2,0" />
+                        <Track x:Name="PART_Track" IsDirectionReversed="True" Margin="2,3">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}"
+                                              Style="{StaticResource ReachItScrollLineButtonStyle}" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource ReachItScrollThumbStyle}" />
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}"
+                                              Style="{StaticResource ReachItScrollLineButtonStyle}" />
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Height" Value="16" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ScrollBar}">
+                            <Grid Height="{TemplateBinding Height}" Background="Transparent" SnapsToDevicePixels="True">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="#223758"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Margin="0,2" />
+                                <Track x:Name="PART_Track" Margin="3,2">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Command="{x:Static ScrollBar.PageLeftCommand}"
+                                                      Style="{StaticResource ReachItScrollLineButtonStyle}" />
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb MinWidth="96" MinHeight="10" Style="{StaticResource ReachItScrollThumbStyle}" />
+                                    </Track.Thumb>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Command="{x:Static ScrollBar.PageRightCommand}"
+                                                      Style="{StaticResource ReachItScrollLineButtonStyle}" />
+                                    </Track.IncreaseRepeatButton>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <Style TargetType="{x:Type ScrollViewer}">

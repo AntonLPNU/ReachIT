@@ -150,38 +150,38 @@ public sealed class CreateProjectViewModel : ViewModelBase
 
     public string TemplateHelpText => SelectedTemplate switch
     {
-        ProjectTemplateType.StudyProject => "For labs, courses, exam prep, notes, and self-learning. It starts from requirements, topic breakdown, materials, main work, and final check.",
-        ProjectTemplateType.FreelanceProject => "For client work. It keeps requirements, references, review rounds, revisions, and final delivery visible.",
-        ProjectTemplateType.CreativeProject => "For games, books, videos, mods, art, design, music, and other creative work. It turns an idea into a draft and then into a finished result.",
-        ProjectTemplateType.ResearchProject => "For analysis, comparison, investigation, and reports. It moves from a question to sources, analysis, and a clear conclusion.",
-        _ => "A mostly empty project with one gentle planning task so the screen is not blank."
+        ProjectTemplateType.StudyProject => ResourceText("Create.TemplateHelp.Study", "For labs, courses, exam prep, notes, and self-learning. It starts from requirements, topic breakdown, materials, main work, and final check."),
+        ProjectTemplateType.FreelanceProject => ResourceText("Create.TemplateHelp.Freelance", "For client work. It keeps requirements, references, review rounds, revisions, and final delivery visible."),
+        ProjectTemplateType.CreativeProject => ResourceText("Create.TemplateHelp.Creative", "For games, books, videos, mods, art, design, music, and other creative work. It turns an idea into a draft and then into a finished result."),
+        ProjectTemplateType.ResearchProject => ResourceText("Create.TemplateHelp.Research", "For analysis, comparison, investigation, and reports. It moves from a question to sources, analysis, and a clear conclusion."),
+        _ => ResourceText("Create.TemplateHelp.Empty", "A mostly empty project with one gentle planning task so the screen is not blank.")
     };
 
     public string MainTopicLabel => SelectedTemplate switch
     {
-        ProjectTemplateType.StudyProject => "Subject / topic",
-        ProjectTemplateType.FreelanceProject => "Client / order",
-        ProjectTemplateType.CreativeProject => "Type / idea",
-        ProjectTemplateType.ResearchProject => "Research question",
-        _ => "Main direction"
+        ProjectTemplateType.StudyProject => ResourceText("Create.MainTopic.Study", "Subject / topic"),
+        ProjectTemplateType.FreelanceProject => ResourceText("Create.MainTopic.Freelance", "Client / order"),
+        ProjectTemplateType.CreativeProject => ResourceText("Create.MainTopic.Creative", "Type / idea"),
+        ProjectTemplateType.ResearchProject => ResourceText("Create.MainTopic.Research", "Research question"),
+        _ => ResourceText("Create.MainTopic.Default", "Main direction")
     };
 
     public string ResultFormatLabel => SelectedTemplate switch
     {
-        ProjectTemplateType.StudyProject => "Result format",
-        ProjectTemplateType.FreelanceProject => "Delivery format",
-        ProjectTemplateType.CreativeProject => "Final format",
-        ProjectTemplateType.ResearchProject => "Research output",
-        _ => "Output format"
+        ProjectTemplateType.StudyProject => ResourceText("Create.ResultFormat.Study", "Result format"),
+        ProjectTemplateType.FreelanceProject => ResourceText("Create.ResultFormat.Freelance", "Delivery format"),
+        ProjectTemplateType.CreativeProject => ResourceText("Create.ResultFormat.Creative", "Final format"),
+        ProjectTemplateType.ResearchProject => ResourceText("Create.ResultFormat.Research", "Research output"),
+        _ => ResourceText("Create.ResultFormat.Default", "Output format")
     };
 
     public string KnownSectionsLabel => SelectedTemplate switch
     {
-        ProjectTemplateType.StudyProject => "Known subtopics",
-        ProjectTemplateType.FreelanceProject => "Known requirements",
-        ProjectTemplateType.CreativeProject => "Known parts",
-        ProjectTemplateType.ResearchProject => "Known directions",
-        _ => "Known stages"
+        ProjectTemplateType.StudyProject => ResourceText("Create.KnownSections.Study", "Known subtopics"),
+        ProjectTemplateType.FreelanceProject => ResourceText("Create.KnownSections.Freelance", "Known requirements"),
+        ProjectTemplateType.CreativeProject => ResourceText("Create.KnownSections.Creative", "Known parts"),
+        ProjectTemplateType.ResearchProject => ResourceText("Create.KnownSections.Research", "Known directions"),
+        _ => ResourceText("Create.KnownSections.Default", "Known stages")
     };
 
     public string? CreatedProjectFolderPath { get; private set; }
@@ -194,6 +194,26 @@ public sealed class CreateProjectViewModel : ViewModelBase
 
     public event EventHandler<string>? RequestCreated;
     public event EventHandler? RequestCancel;
+
+    public void Reset()
+    {
+        ProjectName = string.Empty;
+        Description = string.Empty;
+        SaveLocation = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        SelectedTemplate = ProjectTemplateType.EmptyProject;
+        FinalGoal = string.Empty;
+        MainTopic = string.Empty;
+        DesiredResult = string.Empty;
+        ResultFormat = string.Empty;
+        KnownSections = string.Empty;
+        DetailLevel = "Medium";
+        DeadlineDate = null;
+        CreateStarterFiles = true;
+        LinkTasksToFiles = true;
+        InitialExternalFiles.Clear();
+        CreatedProjectFolderPath = null;
+        _createCommand.RaiseCanExecuteChanged();
+    }
 
     private async Task CreateAsync()
     {
@@ -288,5 +308,10 @@ public sealed class CreateProjectViewModel : ViewModelBase
                 _ => string.Empty
             };
         }
+    }
+
+    private static string ResourceText(string key, string fallback)
+    {
+        return System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
     }
 }

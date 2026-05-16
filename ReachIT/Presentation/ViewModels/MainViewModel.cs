@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using ReachIT.Application.Contracts;
+using ReachIT.Application;
 using ReachIT.Domain.Enums;
 using ReachIT.Domain.Models;
 using ReachIT.Presentation.Commands;
@@ -15,8 +16,11 @@ public sealed class MainViewModel : ViewModelBase
     private readonly IProjectService _projectService;
     private readonly IExternalResourceService _externalResourceService;
     private readonly IFileSystemProjectExplorerService _fileSystemProjectExplorerService;
+    private readonly ITaskService _taskService;
+    private readonly IFileIconService _fileIconService;
     private readonly IWorkUnitService _workUnitService;
     private readonly IAccountService _accountService;
+    private readonly IActiveBrowserUrlService _activeBrowserUrlService;
     private readonly IActivityMonitorService _activityMonitorService;
     private readonly INavigationService _navigationService;
     private readonly IDialogService _dialogService;
@@ -35,14 +39,18 @@ public sealed class MainViewModel : ViewModelBase
     public event EventHandler? RequestExitApplication;
     public event EventHandler? RequestOpenAccount;
     public event EventHandler? RequestOpenDeveloperTestPanel;
+    public event EventHandler? RequestCreateProject;
     public event EventHandler? RequestCloseProject;
 
     public MainViewModel(
         IProjectService projectService,
         IExternalResourceService externalResourceService,
         IFileSystemProjectExplorerService fileSystemProjectExplorerService,
+        ITaskService taskService,
+        IFileIconService fileIconService,
         IWorkUnitService workUnitService,
         IAccountService accountService,
+        IActiveBrowserUrlService activeBrowserUrlService,
         INavigationService navigationService,
         IDialogService dialogService,
         ProjectTreeViewModel projectTreeViewModel,
@@ -56,14 +64,19 @@ public sealed class MainViewModel : ViewModelBase
         VersionsViewModel versionsViewModel,
         SettingsViewModel settingsViewModel,
         FocusModeViewModel focusModeViewModel,
+        WebResourcesViewModel webResourcesViewModel,
         ActivityDashboardViewModel activityDashboardViewModel,
+        DocumentationViewModel documentationViewModel,
         IActivityMonitorService activityMonitorService)
     {
         _projectService = projectService;
         _externalResourceService = externalResourceService;
         _fileSystemProjectExplorerService = fileSystemProjectExplorerService;
+        _taskService = taskService;
+        _fileIconService = fileIconService;
         _workUnitService = workUnitService;
         _accountService = accountService;
+        _activeBrowserUrlService = activeBrowserUrlService;
         _activityMonitorService = activityMonitorService;
         _navigationService = navigationService;
         _dialogService = dialogService;
@@ -80,9 +93,12 @@ public sealed class MainViewModel : ViewModelBase
         VersionsViewModel = versionsViewModel;
         SettingsViewModel = settingsViewModel;
         FocusModeViewModel = focusModeViewModel;
+        WebResourcesViewModel = webResourcesViewModel;
         ActivityDashboardViewModel = activityDashboardViewModel;
+        DocumentationViewModel = documentationViewModel;
 
         OpenProjectCommand = new AsyncCommand(_ => OpenProjectAsync());
+        CreateProjectCommand = new RelayCommand(_ => RequestCreateProject?.Invoke(this, EventArgs.Empty));
         SaveCommand = new AsyncCommand(_ => _projectService.SaveProjectAsync());
         SaveAllCommand = new AsyncCommand(_ => _projectService.SaveAllAsync());
         ToggleSidePanelCommand = new RelayCommand(_ => RequestToggleSidePanel?.Invoke(this, EventArgs.Empty));
@@ -106,6 +122,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             // TODO: Open explorer context action list.
         });
+        AddWebResourceCommand = new AsyncCommand(_ => AddWebResourceAsync());
         AttachExternalFileCommand = new AsyncCommand(_ => AttachExternalFileAsync());
         CopyIntoProjectCommand = new AsyncCommand(_ => CopyIntoProjectAsync());
         SaveAsLinkCommand = new AsyncCommand(_ => SaveAsLinkAsync());
@@ -127,6 +144,12 @@ public sealed class MainViewModel : ViewModelBase
         });
         OpenProjectInfoCommand = new RelayCommand(_ => Navigate(ProjectInfoViewModel));
         OpenFocusCommand = new RelayCommand(_ => Navigate(FocusModeViewModel));
+        OpenWebResourcesCommand = new AsyncCommand(async _ =>
+        {
+            await WebResourcesViewModel.LoadAsync().ConfigureAwait(true);
+            Navigate(WebResourcesViewModel);
+        });
+        OpenDocumentationCommand = new RelayCommand(_ => Navigate(DocumentationViewModel));
         _goBackCommand = new RelayCommand(_ => GoBack(), _ => _navigationService.CanGoBack);
         _goForwardCommand = new RelayCommand(_ => GoForward(), _ => _navigationService.CanGoForward);
         GoBackCommand = _goBackCommand;
@@ -189,7 +212,9 @@ public sealed class MainViewModel : ViewModelBase
     public VersionsViewModel VersionsViewModel { get; }
     public SettingsViewModel SettingsViewModel { get; }
     public FocusModeViewModel FocusModeViewModel { get; }
+    public WebResourcesViewModel WebResourcesViewModel { get; }
     public ActivityDashboardViewModel ActivityDashboardViewModel { get; }
+    public DocumentationViewModel DocumentationViewModel { get; }
 
     public object? CurrentWorkspaceViewModel
     {
@@ -210,6 +235,7 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     public ICommand OpenProjectCommand { get; }
+    public ICommand CreateProjectCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand SaveAllCommand { get; }
     public ICommand ToggleSidePanelCommand { get; }
@@ -229,6 +255,7 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand RevealSelectedNodeCommand { get; }
     public ICommand CollapseAllCommand { get; }
     public ICommand MoreActionsCommand { get; }
+    public ICommand AddWebResourceCommand { get; }
     public ICommand AttachExternalFileCommand { get; }
     public ICommand CopyIntoProjectCommand { get; }
     public ICommand SaveAsLinkCommand { get; }
@@ -241,11 +268,14 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand OpenActivityCommand { get; }
     public ICommand OpenProjectInfoCommand { get; }
     public ICommand OpenFocusCommand { get; }
+    public ICommand OpenWebResourcesCommand { get; }
+    public ICommand OpenDocumentationCommand { get; }
     public ICommand GoBackCommand { get; }
     public ICommand GoForwardCommand { get; }
     public ICommand StartFocusCommand { get; }
     public ICommand StopFocusCommand { get; }
     public ICommand SelectTreeNodeCommand { get; }
+    public bool IsDeveloperToolsAvailable => DeveloperTools.IsEnabled;
 
     public string SelectedNodeIgnoreLabel
     {
@@ -256,9 +286,11 @@ public sealed class MainViewModel : ViewModelBase
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         await RefreshAccountStatusAsync(cancellationToken).ConfigureAwait(true);
+        await _fileIconService.EnsureCacheAsync(cancellationToken).ConfigureAwait(true);
         await SettingsViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
         await FocusModeViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
-        ProjectTreeViewModel.SetNodes(await _projectService.GetCurrentTreeAsync(cancellationToken).ConfigureAwait(true), preserveState: false);
+        await WebResourcesViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
+        ProjectTreeViewModel.SetNodes(await GetProjectTreeWithTasksAsync(cancellationToken).ConfigureAwait(true), preserveState: false);
         await MainDashboardViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
         await ActivityDashboardViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
         await TaskManagerViewModel.LoadAsync(cancellationToken).ConfigureAwait(true);
@@ -283,16 +315,23 @@ public sealed class MainViewModel : ViewModelBase
 
     private async Task OpenProjectAsync()
     {
-        var project = await _projectService.OpenProjectFromDialogAsync().ConfigureAwait(true);
-        if (project is not null)
+        try
         {
-            await InitializeAsync().ConfigureAwait(true);
+            var project = await _projectService.OpenProjectFromDialogAsync().ConfigureAwait(true);
+            if (project is not null)
+            {
+                await InitializeAsync().ConfigureAwait(true);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not open this folder as a ReachIT project.\n\n{ex.Message}", "ReachIT", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
     private async Task RefreshTreeAsync(string? preferredSelectedPath = null, IEnumerable<string>? additionalExpandedPaths = null)
     {
-        var nodes = await _projectService.GetCurrentTreeAsync().ConfigureAwait(true);
+        var nodes = await GetProjectTreeWithTasksAsync().ConfigureAwait(true);
         ProjectTreeViewModel.SetNodes(
             nodes,
             preserveState: true,
@@ -325,6 +364,9 @@ public sealed class MainViewModel : ViewModelBase
                 _ = MainDashboardViewModel.LoadAsync();
                 Navigate(MainDashboardViewModel);
                 break;
+            case ProjectTreeNodeType.Task:
+                _ = SelectTaskNodeAsync(node);
+                break;
             default:
                 FileViewModel.SelectedNodeName = node.Name;
                 FileViewModel.SelectedRelativePath = node.RelativePath;
@@ -355,6 +397,55 @@ public sealed class MainViewModel : ViewModelBase
         await RefreshTreeAsync().ConfigureAwait(true);
         await MainDashboardViewModel.LoadAsync().ConfigureAwait(true);
         await RecentExternalFilesPanelViewModel.LoadAsync().ConfigureAwait(true);
+        await WebResourcesViewModel.LoadAsync().ConfigureAwait(true);
+        await FocusModeViewModel.LoadAsync().ConfigureAwait(true);
+    }
+
+    private async Task AddWebResourceAsync()
+    {
+        if (_projectService.CurrentProject is null)
+        {
+            return;
+        }
+
+        var detectedUrl = _activeBrowserUrlService.TryGetActiveBrowserUrl();
+        var url = Interaction.InputBox(
+            string.IsNullOrWhiteSpace(detectedUrl)
+                ? "Paste a web page URL:"
+                : "Confirm the active browser page URL:",
+            "Add Web Resource",
+            string.IsNullOrWhiteSpace(detectedUrl) ? "https://" : detectedUrl);
+        if (string.IsNullOrWhiteSpace(url) || string.Equals(url.Trim(), "https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        await AddWebResourceFromUrlAsync(url.Trim()).ConfigureAwait(true);
+    }
+
+    public async Task<bool> AddWebResourceFromUrlAsync(string url)
+    {
+        if (_projectService.CurrentProject is null || string.IsNullOrWhiteSpace(url))
+        {
+            return false;
+        }
+
+        try
+        {
+            await _externalResourceService.SaveAsLinkAsync(_projectService.CurrentProject.Id, url.Trim()).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Blocked unsafe web resource.\n\n{ex.Message}", "ReachIT Security", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+
+        await RefreshTreeAsync().ConfigureAwait(true);
+        await MainDashboardViewModel.LoadAsync().ConfigureAwait(true);
+        await RecentExternalFilesPanelViewModel.LoadAsync().ConfigureAwait(true);
+        await WebResourcesViewModel.LoadAsync().ConfigureAwait(true);
+        await FocusModeViewModel.LoadAsync().ConfigureAwait(true);
+        return true;
     }
 
     private async Task CopyIntoProjectAsync()
@@ -378,6 +469,8 @@ public sealed class MainViewModel : ViewModelBase
         await RefreshTreeAsync().ConfigureAwait(true);
         await MainDashboardViewModel.LoadAsync().ConfigureAwait(true);
         await RecentExternalFilesPanelViewModel.LoadAsync().ConfigureAwait(true);
+        await WebResourcesViewModel.LoadAsync().ConfigureAwait(true);
+        await FocusModeViewModel.LoadAsync().ConfigureAwait(true);
     }
 
     private async Task SaveAsLinkAsync()
@@ -393,12 +486,24 @@ public sealed class MainViewModel : ViewModelBase
             sourcePath = _dialogService.ShowOpenFileDialog("All Files (*.*)|*.*");
             if (string.IsNullOrWhiteSpace(sourcePath))
             {
-                // TODO: Add dedicated input for WebLink/URL values in explorer actions.
-                return;
+                sourcePath = Interaction.InputBox("Paste a URL or external file path:", "Add Web Resource", "https://");
+                if (string.IsNullOrWhiteSpace(sourcePath) || string.Equals(sourcePath.Trim(), "https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
             }
         }
 
-        await _externalResourceService.SaveAsLinkAsync(_projectService.CurrentProject.Id, sourcePath).ConfigureAwait(true);
+        try
+        {
+            await _externalResourceService.SaveAsLinkAsync(_projectService.CurrentProject.Id, sourcePath).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Blocked unsafe link.\n\n{ex.Message}", "ReachIT Security", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         await RefreshTreeAsync().ConfigureAwait(true);
         await MainDashboardViewModel.LoadAsync().ConfigureAwait(true);
         await RecentExternalFilesPanelViewModel.LoadAsync().ConfigureAwait(true);
@@ -776,6 +881,28 @@ public sealed class MainViewModel : ViewModelBase
         {
             return node.Name;
         }
+    }
+
+    private async Task<IReadOnlyList<ProjectTreeNode>> GetProjectTreeWithTasksAsync(CancellationToken cancellationToken = default)
+    {
+        var nodes = await _projectService.GetCurrentTreeAsync(cancellationToken).ConfigureAwait(true);
+        var tasks = await _taskService.GetTasksAsync(cancellationToken).ConfigureAwait(true);
+        ProjectTreeViewModel.SetNodes(nodes, preserveState: true);
+        ProjectTreeViewModel.ApplyFileIcons(_fileIconService);
+        ProjectTreeViewModel.AttachTasks(tasks);
+        return ProjectTreeViewModel.Nodes.ToList();
+    }
+
+    private async Task SelectTaskNodeAsync(ProjectTreeNode node)
+    {
+        if (!node.AttachedTaskId.HasValue)
+        {
+            return;
+        }
+
+        await TaskManagerViewModel.LoadAsync().ConfigureAwait(true);
+        TaskManagerViewModel.SelectedTask = TaskManagerViewModel.Tasks.FirstOrDefault(x => x.Id == node.AttachedTaskId.Value);
+        Navigate(TaskManagerViewModel);
     }
 
     private void Navigate(object target)

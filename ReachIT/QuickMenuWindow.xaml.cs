@@ -10,11 +10,6 @@ public partial class QuickMenuWindow : Window
         InitializeComponent();
     }
 
-    private void Window_Deactivated(object? sender, EventArgs e)
-    {
-        Hide();
-    }
-
     private void TitleArea_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         try
