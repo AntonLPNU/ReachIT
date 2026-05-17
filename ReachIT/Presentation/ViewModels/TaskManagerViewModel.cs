@@ -1,7 +1,11 @@
 // Provides task manager commands and list state.
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
+using Microsoft.VisualBasic;
 using ReachIT.Application.Contracts;
 using ReachIT.Domain.Models;
 using ReachIT.Presentation.Commands;
@@ -12,6 +16,8 @@ public sealed class TaskManagerViewModel : ViewModelBase
 {
     private readonly ITaskService _taskService;
     private readonly IProjectService _projectService;
+    private readonly IDialogService _dialogService;
+    private readonly ITaskBoardSyncService _taskBoardSyncService;
     private readonly AsyncCommand _editTaskCommand;
     private readonly AsyncCommand _deleteTaskCommand;
     private readonly AsyncCommand _markCompletedCommand;
@@ -33,11 +39,20 @@ public sealed class TaskManagerViewModel : ViewModelBase
     private TaskDiagramStyle _diagramStyle = TaskDiagramStyle.ReachIt;
     private double _canvasWidth = 960;
     private double _canvasHeight = 520;
+    private TaskRelatedFileNode? _selectedRelatedFile;
+    private string _taskWorkspacePath = "No workspace folder";
+    private string _relatedFilesSummary = "No files linked to this task.";
 
-    public TaskManagerViewModel(ITaskService taskService, IProjectService projectService)
+    public TaskManagerViewModel(
+        ITaskService taskService,
+        IProjectService projectService,
+        IDialogService dialogService,
+        ITaskBoardSyncService taskBoardSyncService)
     {
         _taskService = taskService;
         _projectService = projectService;
+        _dialogService = dialogService;
+        _taskBoardSyncService = taskBoardSyncService;
 
         AddTaskCommand = new AsyncCommand(_ => AddTaskAsync());
         SelectTaskCommand = new RelayCommand(p => SelectTask(p as TaskItem));
@@ -59,6 +74,17 @@ public sealed class TaskManagerViewModel : ViewModelBase
         SaveAllCommand = new AsyncCommand(_ => SaveAllAsync());
         AddSubtaskCommand = new AsyncCommand(_ => AddSubtaskAsync(), _ => SelectedTask is not null);
         DiscardChangesCommand = new RelayCommand(_ => DiscardChanges(), _ => SelectedTask is not null);
+        CreateWorkspaceFolderCommand = new AsyncCommand(_ => CreateWorkspaceFolderAsync(), _ => SelectedTask is not null);
+        ChooseWorkspaceFolderCommand = new AsyncCommand(_ => ChooseWorkspaceFolderAsync(), _ => SelectedTask is not null);
+        NewTaskFileCommand = new AsyncCommand(_ => CreateLinkedFileAsync(), _ => SelectedTask is not null);
+        NewTaskFolderCommand = new AsyncCommand(_ => CreateLinkedFolderAsync(), _ => SelectedTask is not null);
+        LinkExistingFileCommand = new AsyncCommand(_ => LinkExistingFileAsync(), _ => SelectedTask is not null);
+        ImportExternalFileCommand = new AsyncCommand(_ => ImportExternalFileAsync(), _ => SelectedTask is not null);
+        RenameRelatedFileCommand = new AsyncCommand(_ => RenameRelatedFileAsync(), _ => SelectedRelatedFile is not null);
+        OpenTaskWorkspaceCommand = new RelayCommand(_ => OpenTaskWorkspace(), _ => HasTaskWorkspace);
+        RevealTaskWorkspaceCommand = new RelayCommand(_ => RevealTaskWorkspace(), _ => HasTaskWorkspace);
+        OpenRelatedFileCommand = new RelayCommand(_ => OpenRelatedFile(), _ => SelectedRelatedFile is not null);
+        RevealRelatedFileCommand = new RelayCommand(_ => RevealRelatedFile(), _ => SelectedRelatedFile is not null);
     }
 
     public ObservableCollection<TaskItem> Tasks { get; } = new();
@@ -66,6 +92,9 @@ public sealed class TaskManagerViewModel : ViewModelBase
     public ObservableCollection<TaskItem> TreeTasks { get; } = new();
     public ObservableCollection<TaskCanvasNode> CanvasTasks { get; } = new();
     public ObservableCollection<TaskCanvasConnector> CanvasConnectors { get; } = new();
+    public ObservableCollection<TaskRelatedFileNode> RelatedFiles { get; } = new();
+
+    public event EventHandler? RequestProjectTreeRefresh;
 
     public string SearchText
     {
@@ -166,6 +195,7 @@ public sealed class TaskManagerViewModel : ViewModelBase
             if (SetProperty(ref _selectedTask, value))
             {
                 PopulateEditorFromSelection();
+                _ = RefreshRelatedFilesAsync();
                 UpdateCanvasSelection();
                 RaiseCommandStates();
             }
@@ -232,6 +262,34 @@ public sealed class TaskManagerViewModel : ViewModelBase
         private set => SetProperty(ref _deadlineValidationMessage, value);
     }
 
+    public TaskRelatedFileNode? SelectedRelatedFile
+    {
+        get => _selectedRelatedFile;
+        set
+        {
+            if (SetProperty(ref _selectedRelatedFile, value))
+            {
+                RaiseCommandStates();
+            }
+        }
+    }
+
+    public string TaskWorkspacePath
+    {
+        get => _taskWorkspacePath;
+        private set => SetProperty(ref _taskWorkspacePath, value);
+    }
+
+    public bool HasTaskWorkspace => SelectedTask is not null && !string.IsNullOrWhiteSpace(SelectedTask.AttachedFilePath);
+
+    public string RelatedFilesSummary
+    {
+        get => _relatedFilesSummary;
+        private set => SetProperty(ref _relatedFilesSummary, value);
+    }
+
+    public bool HasRelatedFiles => RelatedFiles.Count > 0;
+
     public ICommand AddTaskCommand { get; }
     public ICommand SelectTaskCommand { get; }
     public ICommand SetListViewCommand { get; }
@@ -246,6 +304,17 @@ public sealed class TaskManagerViewModel : ViewModelBase
     public ICommand SaveAllCommand { get; }
     public ICommand AddSubtaskCommand { get; }
     public ICommand DiscardChangesCommand { get; }
+    public ICommand CreateWorkspaceFolderCommand { get; }
+    public ICommand ChooseWorkspaceFolderCommand { get; }
+    public ICommand NewTaskFileCommand { get; }
+    public ICommand NewTaskFolderCommand { get; }
+    public ICommand LinkExistingFileCommand { get; }
+    public ICommand ImportExternalFileCommand { get; }
+    public ICommand RenameRelatedFileCommand { get; }
+    public ICommand OpenTaskWorkspaceCommand { get; }
+    public ICommand RevealTaskWorkspaceCommand { get; }
+    public ICommand OpenRelatedFileCommand { get; }
+    public ICommand RevealRelatedFileCommand { get; }
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -588,6 +657,11 @@ public sealed class TaskManagerViewModel : ViewModelBase
         }
 
         DeadlineValidationMessage = string.Empty;
+        var isCompleting = !SelectedTask.IsCompleted && EditIsCompleted;
+        if (isCompleting && !await ConfirmCompletionAsync(SelectedTask).ConfigureAwait(true))
+        {
+            return;
+        }
 
         SelectedTask.Title = EditTitle.Trim();
         SelectedTask.Description = EditDescription?.Trim() ?? string.Empty;
@@ -618,6 +692,7 @@ public sealed class TaskManagerViewModel : ViewModelBase
         if (idx >= 0) { Tasks[idx] = SelectedTask; }
         ApplyFilter();
         SelectedTask = FilteredTasks.FirstOrDefault(t => t.Id == SelectedTask.Id);
+        await RefreshRelatedFilesAsync().ConfigureAwait(true);
     }
 
     private void DiscardChanges()
@@ -633,7 +708,9 @@ public sealed class TaskManagerViewModel : ViewModelBase
             await _taskService.UpdateTaskAsync(t).ConfigureAwait(true);
             t.HasUnsavedChanges = false;
         }
+        await _taskBoardSyncService.ExportCurrentProjectAsync().ConfigureAwait(true);
         ApplyFilter();
+        await RefreshRelatedFilesAsync().ConfigureAwait(true);
     }
 
     private async Task AddSubtaskAsync()
@@ -647,6 +724,7 @@ public sealed class TaskManagerViewModel : ViewModelBase
             Priority = 0
         };
         await _taskService.AddTaskAsync(sub).ConfigureAwait(true);
+        await _taskBoardSyncService.ExportCurrentProjectAsync().ConfigureAwait(true);
         await LoadAsync().ConfigureAwait(true);
     }
 
@@ -658,6 +736,7 @@ public sealed class TaskManagerViewModel : ViewModelBase
         }
 
         await _taskService.DeleteTaskAsync(SelectedTask.Id).ConfigureAwait(true);
+        await _taskBoardSyncService.ExportCurrentProjectAsync().ConfigureAwait(true);
         await LoadAsync().ConfigureAwait(true);
     }
 
@@ -673,12 +752,253 @@ public sealed class TaskManagerViewModel : ViewModelBase
             return;
         }
 
+        if (!await ConfirmCompletionAsync(task).ConfigureAwait(true))
+        {
+            return;
+        }
+
         SelectedTask = task;
         task.IsCompleted = true;
         task.Status = "Done";
         task.CompletedAtUtc = DateTime.UtcNow;
         task.StartedAtUtc ??= task.CompletedAtUtc;
         await _taskService.UpdateTaskAsync(task).ConfigureAwait(true);
+        await _taskBoardSyncService.ExportCurrentProjectAsync().ConfigureAwait(true);
+        await LoadAsync().ConfigureAwait(true);
+    }
+
+    private async Task<bool> ConfirmCompletionAsync(TaskItem task)
+    {
+        var openSubtasks = GetTaskAndDescendants(task)
+            .Skip(1)
+            .Count(x => !x.IsCompleted);
+        var links = await _taskService.GetTaskFileLinksAsync(task.Id, includeDescendants: true).ConfigureAwait(true);
+        var linkedItems = links.Count > 0
+            ? links.Select(x => x.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).Count()
+            : GetTaskAndDescendants(task)
+                .Select(x => x.AttachedFilePath)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count();
+
+        var doneCriteria = string.IsNullOrWhiteSpace(task.Description)
+            ? "No done criteria written in the description."
+            : task.Description.Trim();
+
+        var message =
+            $"Confirm that this task is complete:{Environment.NewLine}{Environment.NewLine}" +
+            $"Task: {task.Title}{Environment.NewLine}" +
+            $"Done criteria: {doneCriteria}{Environment.NewLine}" +
+            $"Open subtasks: {openSubtasks}{Environment.NewLine}" +
+            $"Linked files/folders: {linkedItems}{Environment.NewLine}{Environment.NewLine}" +
+            "Use OK only when the result is ready and the useful files are linked to the task.";
+
+        return MessageBox.Show(
+            message,
+            "Confirm task completion",
+            MessageBoxButton.OKCancel,
+            openSubtasks > 0 ? MessageBoxImage.Warning : MessageBoxImage.Question) == MessageBoxResult.OK;
+    }
+
+    private async Task CreateWorkspaceFolderAsync()
+    {
+        if (SelectedTask is null)
+        {
+            return;
+        }
+
+        var folderPath = CreateWorkspaceDirectory(SelectedTask);
+        if (string.IsNullOrWhiteSpace(folderPath))
+        {
+            DeadlineValidationMessage = "Open a project before creating a task folder.";
+            return;
+        }
+
+        SelectedTask.AttachedFilePath = folderPath;
+        await _taskService.UpdateTaskAsync(SelectedTask).ConfigureAwait(true);
+        await _taskService.LinkTaskFileAsync(_projectService.CurrentProject!.Id, SelectedTask.Id, folderPath, isDirectory: true, source: "TaskWorkspace")
+            .ConfigureAwait(true);
+        await _taskBoardSyncService.ExportCurrentProjectAsync().ConfigureAwait(true);
+        RequestProjectTreeRefresh?.Invoke(this, EventArgs.Empty);
+        await LoadAsync().ConfigureAwait(true);
+        SelectedTask = Tasks.FirstOrDefault(x => x.Id == SelectedTask.Id);
+    }
+
+    private async Task ChooseWorkspaceFolderAsync()
+    {
+        if (SelectedTask is null)
+        {
+            return;
+        }
+
+        var project = _projectService.CurrentProject;
+        if (project is null)
+        {
+            DeadlineValidationMessage = "Open a project before choosing a task folder.";
+            return;
+        }
+
+        var folderPath = _dialogService.ShowOpenFolderDialog(project.ProjectDirectoryPath);
+        if (string.IsNullOrWhiteSpace(folderPath))
+        {
+            return;
+        }
+
+        if (!IsInsideProject(project, folderPath))
+        {
+            DeadlineValidationMessage = "Choose a folder inside the current project.";
+            return;
+        }
+
+        SelectedTask.AttachedFilePath = Path.GetFullPath(folderPath);
+        await _taskService.UpdateTaskAsync(SelectedTask).ConfigureAwait(true);
+        await _taskService.LinkTaskFileAsync(project.Id, SelectedTask.Id, SelectedTask.AttachedFilePath, isDirectory: true, source: "TaskWorkspace")
+            .ConfigureAwait(true);
+        await _taskBoardSyncService.ExportCurrentProjectAsync().ConfigureAwait(true);
+        RequestProjectTreeRefresh?.Invoke(this, EventArgs.Empty);
+        await LoadAsync().ConfigureAwait(true);
+        SelectedTask = Tasks.FirstOrDefault(x => x.Id == SelectedTask.Id);
+    }
+
+    private async Task CreateLinkedFileAsync()
+    {
+        if (SelectedTask is null || _projectService.CurrentProject is not { } project)
+        {
+            return;
+        }
+
+        var targetDirectory = ResolveTaskExplorerTargetDirectory(project);
+        Directory.CreateDirectory(targetDirectory);
+        var filePath = GetUniquePath(targetDirectory, "NewFile", ".txt");
+        await File.WriteAllTextAsync(filePath, string.Empty).ConfigureAwait(true);
+        await _taskService.LinkTaskFileAsync(project.Id, SelectedTask.Id, filePath, isDirectory: false, source: "TaskExplorerNewFile")
+            .ConfigureAwait(true);
+        await _taskBoardSyncService.ExportCurrentProjectAsync().ConfigureAwait(true);
+        RequestProjectTreeRefresh?.Invoke(this, EventArgs.Empty);
+        await RefreshRelatedFilesAsync().ConfigureAwait(true);
+    }
+
+    private async Task CreateLinkedFolderAsync()
+    {
+        if (SelectedTask is null || _projectService.CurrentProject is not { } project)
+        {
+            return;
+        }
+
+        var targetDirectory = ResolveTaskExplorerTargetDirectory(project);
+        Directory.CreateDirectory(targetDirectory);
+        var folderPath = GetUniquePath(targetDirectory, "NewFolder", string.Empty);
+        Directory.CreateDirectory(folderPath);
+        await _taskService.LinkTaskFileAsync(project.Id, SelectedTask.Id, folderPath, isDirectory: true, source: "TaskExplorerNewFolder")
+            .ConfigureAwait(true);
+        await _taskBoardSyncService.ExportCurrentProjectAsync().ConfigureAwait(true);
+        RequestProjectTreeRefresh?.Invoke(this, EventArgs.Empty);
+        await RefreshRelatedFilesAsync().ConfigureAwait(true);
+    }
+
+    private async Task LinkExistingFileAsync()
+    {
+        if (SelectedTask is null || _projectService.CurrentProject is not { } project)
+        {
+            return;
+        }
+
+        var filePath = _dialogService.ShowOpenFileDialog("All Files (*.*)|*.*");
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
+        if (!IsInsideProject(project, filePath))
+        {
+            DeadlineValidationMessage = "Choose a file inside the current project.";
+            return;
+        }
+
+        await _taskService.LinkTaskFileAsync(project.Id, SelectedTask.Id, filePath, isDirectory: false, source: "TaskExplorerExistingFile")
+            .ConfigureAwait(true);
+        await _taskBoardSyncService.ExportCurrentProjectAsync().ConfigureAwait(true);
+        await RefreshRelatedFilesAsync().ConfigureAwait(true);
+    }
+
+    private async Task ImportExternalFileAsync()
+    {
+        if (SelectedTask is null || _projectService.CurrentProject is not { } project)
+        {
+            return;
+        }
+
+        var sourcePath = _dialogService.ShowOpenFileDialog("All Files (*.*)|*.*");
+        if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
+        {
+            return;
+        }
+
+        var targetDirectory = ResolveTaskExplorerTargetDirectory(project);
+        Directory.CreateDirectory(targetDirectory);
+        var targetPath = GetUniqueImportedPath(targetDirectory, Path.GetFileName(sourcePath));
+        File.Copy(sourcePath, targetPath, overwrite: false);
+
+        await _taskService.LinkTaskFileAsync(project.Id, SelectedTask.Id, targetPath, isDirectory: false, source: "TaskExplorerImport")
+            .ConfigureAwait(true);
+        await _taskBoardSyncService.ExportCurrentProjectAsync().ConfigureAwait(true);
+        RequestProjectTreeRefresh?.Invoke(this, EventArgs.Empty);
+        await RefreshRelatedFilesAsync().ConfigureAwait(true);
+    }
+
+    private async Task RenameRelatedFileAsync()
+    {
+        if (SelectedRelatedFile is null || _projectService.CurrentProject is not { } project)
+        {
+            return;
+        }
+
+        var oldPath = SelectedRelatedFile.FullPath;
+        if (!IsInsideProject(project, oldPath) || (!File.Exists(oldPath) && !Directory.Exists(oldPath)))
+        {
+            DeadlineValidationMessage = "Only existing project files can be renamed here.";
+            return;
+        }
+
+        var currentName = Path.GetFileName(oldPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var newName = Interaction.InputBox("Enter a new name:", "Rename task file", currentName).Trim();
+        if (string.IsNullOrWhiteSpace(newName) || newName == currentName)
+        {
+            return;
+        }
+
+        if (newName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            DeadlineValidationMessage = "File name contains invalid characters.";
+            return;
+        }
+
+        var parentDirectory = Path.GetDirectoryName(oldPath);
+        if (string.IsNullOrWhiteSpace(parentDirectory))
+        {
+            return;
+        }
+
+        var newPath = Path.Combine(parentDirectory, newName);
+        if (File.Exists(newPath) || Directory.Exists(newPath))
+        {
+            DeadlineValidationMessage = "A file or folder with this name already exists.";
+            return;
+        }
+
+        if (SelectedRelatedFile.IsDirectory)
+        {
+            Directory.Move(oldPath, newPath);
+        }
+        else
+        {
+            File.Move(oldPath, newPath);
+        }
+
+        await _taskService.MoveLinkedPathAsync(project.Id, oldPath, newPath, SelectedRelatedFile.IsDirectory)
+            .ConfigureAwait(true);
+        await _taskBoardSyncService.ExportCurrentProjectAsync().ConfigureAwait(true);
+        RequestProjectTreeRefresh?.Invoke(this, EventArgs.Empty);
         await LoadAsync().ConfigureAwait(true);
     }
 
@@ -729,6 +1049,7 @@ public sealed class TaskManagerViewModel : ViewModelBase
             EditPriority = 2;
             EditStatus = "To Do";
             DeadlineValidationMessage = string.Empty;
+            _ = RefreshRelatedFilesAsync();
             OnPropertyChanged(nameof(IsTaskSelected));
             return;
         }
@@ -740,6 +1061,7 @@ public sealed class TaskManagerViewModel : ViewModelBase
         EditPriority = SelectedTask.Priority;
         EditStatus = SelectedTask.Status;
         DeadlineValidationMessage = string.Empty;
+        _ = RefreshRelatedFilesAsync();
         OnPropertyChanged(nameof(IsTaskSelected));
     }
 
@@ -748,7 +1070,398 @@ public sealed class TaskManagerViewModel : ViewModelBase
         _editTaskCommand.RaiseCanExecuteChanged();
         _deleteTaskCommand.RaiseCanExecuteChanged();
         _markCompletedCommand.RaiseCanExecuteChanged();
+        if (CreateWorkspaceFolderCommand is AsyncCommand createWorkspace) createWorkspace.RaiseCanExecuteChanged();
+        if (ChooseWorkspaceFolderCommand is AsyncCommand chooseWorkspace) chooseWorkspace.RaiseCanExecuteChanged();
+        if (NewTaskFileCommand is AsyncCommand newTaskFile) newTaskFile.RaiseCanExecuteChanged();
+        if (NewTaskFolderCommand is AsyncCommand newTaskFolder) newTaskFolder.RaiseCanExecuteChanged();
+        if (LinkExistingFileCommand is AsyncCommand linkExistingFile) linkExistingFile.RaiseCanExecuteChanged();
+        if (ImportExternalFileCommand is AsyncCommand importExternalFile) importExternalFile.RaiseCanExecuteChanged();
+        if (RenameRelatedFileCommand is AsyncCommand renameRelatedFile) renameRelatedFile.RaiseCanExecuteChanged();
+        if (OpenTaskWorkspaceCommand is RelayCommand openWorkspace) openWorkspace.RaiseCanExecuteChanged();
+        if (RevealTaskWorkspaceCommand is RelayCommand revealWorkspace) revealWorkspace.RaiseCanExecuteChanged();
+        if (OpenRelatedFileCommand is RelayCommand openRelated) openRelated.RaiseCanExecuteChanged();
+        if (RevealRelatedFileCommand is RelayCommand revealRelated) revealRelated.RaiseCanExecuteChanged();
+        OnPropertyChanged(nameof(HasTaskWorkspace));
+        OnPropertyChanged(nameof(HasRelatedFiles));
     }
+
+    private async Task RefreshRelatedFilesAsync()
+    {
+        RelatedFiles.Clear();
+        SelectedRelatedFile = null;
+
+        if (SelectedTask is null)
+        {
+            TaskWorkspacePath = "No workspace folder";
+            RelatedFilesSummary = "No files linked to this task.";
+            RaiseCommandStates();
+            return;
+        }
+
+        TaskWorkspacePath = string.IsNullOrWhiteSpace(SelectedTask.AttachedFilePath)
+            ? "No workspace folder"
+            : SelectedTask.AttachedFilePath;
+
+        var links = await _taskService.GetTaskFileLinksAsync(SelectedTask.Id, includeDescendants: true).ConfigureAwait(true);
+        if (links.Count == 0)
+        {
+            links = GetLegacyLinks(SelectedTask).ToList();
+        }
+
+        var addedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var nodeBudget = 200;
+
+        foreach (var link in links)
+        {
+            var path = link.FilePath;
+            if (string.IsNullOrWhiteSpace(path) || !addedPaths.Add(path))
+            {
+                continue;
+            }
+
+            var taskTitle = Tasks.FirstOrDefault(t => t.Id == link.TaskItemId)?.Title ?? SelectedTask.Title;
+            var node = BuildRelatedFileNode(path, taskTitle, ref nodeBudget);
+            if (node is not null)
+            {
+                RelatedFiles.Add(node);
+            }
+        }
+
+        RelatedFilesSummary = RelatedFiles.Count == 0
+            ? "No files linked to this task or its subtasks."
+            : $"{RelatedFiles.Count} linked workspace item(s).";
+
+        OnPropertyChanged(nameof(HasRelatedFiles));
+        RaiseCommandStates();
+    }
+
+    private IEnumerable<TaskFileLink> GetLegacyLinks(TaskItem root)
+    {
+        foreach (var task in GetTaskAndDescendants(root))
+        {
+            if (string.IsNullOrWhiteSpace(task.AttachedFilePath))
+            {
+                continue;
+            }
+
+            yield return new TaskFileLink
+            {
+                ProjectId = _projectService.CurrentProject?.Id ?? Guid.Empty,
+                TaskItemId = task.Id,
+                FilePath = task.AttachedFilePath,
+                IsDirectory = Directory.Exists(task.AttachedFilePath),
+                LinkedAtUtc = task.CompletedAtUtc ?? task.StartedAtUtc ?? DateTime.UtcNow,
+                LinkSource = "Legacy"
+            };
+        }
+    }
+
+    private IEnumerable<TaskItem> GetTaskAndDescendants(TaskItem root)
+    {
+        yield return root;
+
+        var byParent = Tasks
+            .Where(t => t.ParentTaskId.HasValue)
+            .GroupBy(t => t.ParentTaskId!.Value)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        foreach (var child in Descendants(root.Id, new HashSet<Guid>()))
+        {
+            yield return child;
+        }
+
+        IEnumerable<TaskItem> Descendants(Guid parentId, HashSet<Guid> visited)
+        {
+            if (!byParent.TryGetValue(parentId, out var children))
+            {
+                yield break;
+            }
+
+            foreach (var child in children)
+            {
+                if (!visited.Add(child.Id))
+                {
+                    continue;
+                }
+
+                yield return child;
+                foreach (var descendant in Descendants(child.Id, visited))
+                {
+                    yield return descendant;
+                }
+            }
+        }
+    }
+
+    private static TaskRelatedFileNode? BuildRelatedFileNode(string path, string taskTitle, ref int budget)
+    {
+        if (budget <= 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (Directory.Exists(fullPath))
+            {
+                budget--;
+                var directoryInfo = new DirectoryInfo(fullPath);
+                var node = new TaskRelatedFileNode(directoryInfo.Name, fullPath, true, taskTitle);
+                foreach (var directory in directoryInfo.EnumerateDirectories().OrderBy(x => x.Name))
+                {
+                    if (ShouldSkipDirectory(directory.Name))
+                    {
+                        continue;
+                    }
+
+                    var child = BuildRelatedFileNode(directory.FullName, taskTitle, ref budget);
+                    if (child is not null)
+                    {
+                        node.Children.Add(child);
+                    }
+                }
+
+                foreach (var file in directoryInfo.EnumerateFiles().OrderBy(x => x.Name))
+                {
+                    if (budget <= 0)
+                    {
+                        break;
+                    }
+
+                    budget--;
+                    node.Children.Add(new TaskRelatedFileNode(file.Name, file.FullName, false, taskTitle));
+                }
+
+                return node;
+            }
+
+            if (File.Exists(fullPath))
+            {
+                budget--;
+                return new TaskRelatedFileNode(Path.GetFileName(fullPath), fullPath, false, taskTitle);
+            }
+        }
+        catch
+        {
+            return new TaskRelatedFileNode(path, path, false, taskTitle);
+        }
+
+        return new TaskRelatedFileNode(path, path, false, taskTitle);
+    }
+
+    private static bool ShouldSkipDirectory(string name)
+    {
+        return name.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("node_modules", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string? CreateWorkspaceDirectory(TaskItem task)
+    {
+        var project = _projectService.CurrentProject;
+        if (project is null || string.IsNullOrWhiteSpace(project.ProjectDirectoryPath))
+        {
+            return null;
+        }
+
+        var tasksRoot = Path.Combine(project.ProjectDirectoryPath, "Tasks");
+        Directory.CreateDirectory(tasksRoot);
+
+        var baseName = Slugify(task.Title);
+        var folderPath = EnsureUniqueDirectory(Path.Combine(tasksRoot, baseName));
+        Directory.CreateDirectory(folderPath);
+        return folderPath;
+    }
+
+    private string ResolveTaskExplorerTargetDirectory(ProjectMeta project)
+    {
+        if (SelectedRelatedFile is { IsDirectory: true } selectedDirectory && IsInsideProject(project, selectedDirectory.FullPath))
+        {
+            return selectedDirectory.FullPath;
+        }
+
+        if (SelectedRelatedFile is { IsDirectory: false } selectedFile)
+        {
+            var parent = Path.GetDirectoryName(selectedFile.FullPath);
+            if (!string.IsNullOrWhiteSpace(parent) && IsInsideProject(project, parent))
+            {
+                return parent;
+            }
+        }
+
+        if (SelectedTask?.AttachedFilePath is { Length: > 0 } attachedPath)
+        {
+            if (Directory.Exists(attachedPath) && IsInsideProject(project, attachedPath))
+            {
+                return attachedPath;
+            }
+
+            var parent = Path.GetDirectoryName(attachedPath);
+            if (!string.IsNullOrWhiteSpace(parent) && IsInsideProject(project, parent))
+            {
+                return parent;
+            }
+        }
+
+        var taskRoot = Path.Combine(project.ProjectDirectoryPath, "Tasks", Slugify(SelectedTask?.Title ?? "New Task"));
+        Directory.CreateDirectory(taskRoot);
+        return taskRoot;
+    }
+
+    private static string GetUniquePath(string directoryPath, string baseName, string extension)
+    {
+        var index = 0;
+        while (true)
+        {
+            var name = index == 0 ? $"{baseName}{extension}" : $"{baseName}{index}{extension}";
+            var path = Path.Combine(directoryPath, name);
+            if (!File.Exists(path) && !Directory.Exists(path))
+            {
+                return path;
+            }
+
+            index++;
+        }
+    }
+
+    private static string GetUniqueImportedPath(string directoryPath, string fileName)
+    {
+        var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        var extension = Path.GetExtension(fileName);
+        return GetUniquePath(directoryPath, string.IsNullOrWhiteSpace(nameWithoutExtension) ? "ImportedFile" : nameWithoutExtension, extension);
+    }
+
+    private static string EnsureUniqueDirectory(string folderPath)
+    {
+        if (!Directory.Exists(folderPath))
+        {
+            return folderPath;
+        }
+
+        var parent = Path.GetDirectoryName(folderPath) ?? string.Empty;
+        var name = Path.GetFileName(folderPath);
+        for (var i = 2; i < 1000; i++)
+        {
+            var candidate = Path.Combine(parent, $"{name} {i}");
+            if (!Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return Path.Combine(parent, $"{name} {DateTime.Now:yyyyMMddHHmmss}");
+    }
+
+    private static string Slugify(string title)
+    {
+        var invalid = Path.GetInvalidFileNameChars().ToHashSet();
+        var builder = new StringBuilder();
+        foreach (var ch in title.Trim())
+        {
+            builder.Append(invalid.Contains(ch) ? '-' : ch);
+        }
+
+        var value = builder.ToString().Trim(' ', '.', '-');
+        return string.IsNullOrWhiteSpace(value) ? "New Task" : value;
+    }
+
+    private static bool IsInsideProject(ProjectMeta project, string folderPath)
+    {
+        try
+        {
+            var root = Path.GetFullPath(project.ProjectDirectoryPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var target = Path.GetFullPath(folderPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return target.Equals(root, StringComparison.OrdinalIgnoreCase) ||
+                   target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void OpenTaskWorkspace()
+    {
+        if (SelectedTask?.AttachedFilePath is { Length: > 0 } path)
+        {
+            OpenPath(path);
+        }
+    }
+
+    private void RevealTaskWorkspace()
+    {
+        if (SelectedTask?.AttachedFilePath is { Length: > 0 } path)
+        {
+            RevealPath(path);
+        }
+    }
+
+    private void OpenRelatedFile()
+    {
+        if (SelectedRelatedFile is not null)
+        {
+            OpenPath(SelectedRelatedFile.FullPath);
+        }
+    }
+
+    private void RevealRelatedFile()
+    {
+        if (SelectedRelatedFile is not null)
+        {
+            RevealPath(SelectedRelatedFile.FullPath);
+        }
+    }
+
+    private static void OpenPath(string path)
+    {
+        if (!File.Exists(path) && !Directory.Exists(path))
+        {
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = path,
+            UseShellExecute = true
+        });
+    }
+
+    private static void RevealPath(string path)
+    {
+        if (!File.Exists(path) && !Directory.Exists(path))
+        {
+            return;
+        }
+
+        var target = Directory.Exists(path) ? $"\"{path}\"" : $"/select,\"{path}\"";
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "explorer.exe",
+            Arguments = target,
+            UseShellExecute = true
+        });
+    }
+}
+
+public sealed class TaskRelatedFileNode
+{
+    public TaskRelatedFileNode(string name, string fullPath, bool isDirectory, string taskTitle)
+    {
+        Name = name;
+        FullPath = fullPath;
+        IsDirectory = isDirectory;
+        TaskTitle = taskTitle;
+    }
+
+    public string Name { get; }
+    public string FullPath { get; }
+    public bool IsDirectory { get; }
+    public string TaskTitle { get; }
+    public ObservableCollection<TaskRelatedFileNode> Children { get; } = [];
+    public string Kind => IsDirectory ? "Folder" : "File";
+    public string IconKind => IsDirectory ? "FolderOpen" : "FileDocument";
 }
 
 public sealed class TaskCanvasNode : ViewModelBase

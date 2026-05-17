@@ -22,6 +22,7 @@ public class TaskItem
     public Guid? CategoryId { get; set; }
     public TaskCategory? Category { get; set; }
     public List<TaskTag> Tags { get; set; } = new();
+    public List<TaskFileLink> FileLinks { get; set; } = new();
 
     [NotMapped]
     public bool HasUnsavedChanges { get; set; }

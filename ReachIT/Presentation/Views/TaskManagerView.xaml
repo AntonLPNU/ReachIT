@@ -316,6 +316,40 @@
                 </Grid>
             </Border>
         </HierarchicalDataTemplate>
+
+        <HierarchicalDataTemplate x:Key="TaskRelatedFileTemplate" ItemsSource="{Binding Children}">
+            <Grid MinHeight="36" Margin="0,2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Width="24"
+                        Height="24"
+                        CornerRadius="6"
+                        Background="#123C68"
+                        BorderBrush="#31547A"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center">
+                    <iconPacks:PackIconMaterial Kind="{Binding IconKind}"
+                                                Width="15"
+                                                Height="15"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Foreground="{StaticResource SkyAquaBrush}" />
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"
+                               TextWrapping="NoWrap" />
+                    <TextBlock Text="{Binding TaskTitle}"
+                               Style="{StaticResource ReachItMutedTextStyle}"
+                               FontSize="11"
+                               TextTrimming="CharacterEllipsis"
+                               TextWrapping="NoWrap" />
+                </StackPanel>
+            </Grid>
+        </HierarchicalDataTemplate>
     </UserControl.Resources>
 
     <Grid Margin="0,0,0,14">
@@ -645,7 +679,7 @@
 
                     <Button Command="{Binding DeleteTaskCommand}"
                             Style="{StaticResource ReachItDangerButtonStyle}"
-                            Margin="0,0,0,16"
+                            Margin="0,0,0,8"
                             ToolTip="Delete the selected task.">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <iconPacks:PackIconMaterial Kind="Delete" Width="16" Height="16" Margin="0,0,8,0" />
@@ -723,6 +757,77 @@
                             <Button Grid.Column="4" Content="{DynamicResource Tasks.Clear}" Command="{Binding ClearDeadlineCommand}" Style="{StaticResource ReachItSecondaryButtonStyle}" ToolTip="Remove the deadline." />
                         </Grid>
 
+                        <Separator Margin="0,2,0,14" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <iconPacks:PackIconMaterial Kind="FolderOpen"
+                                                        Width="22"
+                                                        Height="22"
+                                                        Margin="0,1,9,0"
+                                                        Foreground="{StaticResource SkyAquaBrush}" />
+                            <TextBlock Text="Task workspace"
+                                       Style="{StaticResource ReachItSectionTitleTextStyle}"
+                                       Margin="0" />
+                        </StackPanel>
+
+                        <Border Style="{StaticResource ReachItMetricCardStyle}" Margin="0,0,0,10">
+                            <TextBlock Text="{Binding TaskWorkspacePath}"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis" />
+                        </Border>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0"
+                                    Command="{Binding CreateWorkspaceFolderCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    ToolTip="Create a project folder for this task.">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="FolderPlus" Width="15" Height="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="Create folder" />
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Command="{Binding ChooseWorkspaceFolderCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    ToolTip="Link this task to an existing project folder.">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="FolderSearch" Width="15" Height="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="Choose folder" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0"
+                                    Command="{Binding OpenTaskWorkspaceCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    ToolTip="Open this task workspace.">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="OpenInNew" Width="15" Height="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="Open" />
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Command="{Binding RevealTaskWorkspaceCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    ToolTip="Reveal this task workspace in Explorer.">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="FolderOpenOutline" Width="15" Height="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="Reveal" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
                         <Button Command="{Binding EditTaskCommand}" ToolTip="Apply edits to the selected task. Use Save All to write unsaved tasks.">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <iconPacks:PackIconMaterial Kind="CheckCircleOutline" Width="17" Height="17" Margin="0,0,8,0" />
@@ -741,6 +846,134 @@
                                 <TextBlock Text="{DynamicResource Tasks.MarkCompleted}" />
                             </StackPanel>
                         </Button>
+
+                        <Separator Margin="0,10,0,14" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <iconPacks:PackIconMaterial Kind="FileTree"
+                                                        Width="22"
+                                                        Height="22"
+                                                        Margin="0,1,9,0"
+                                                        Foreground="{StaticResource SkyAquaBrush}" />
+                            <TextBlock Text="Related files"
+                                       Style="{StaticResource ReachItSectionTitleTextStyle}"
+                                       Margin="0" />
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding RelatedFilesSummary}"
+                                   Style="{StaticResource ReachItMutedTextStyle}"
+                                   Margin="0,0,0,8" />
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0"
+                                    Command="{Binding NewTaskFileCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    ToolTip="Create a new file in the selected task folder and link it to this task.">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="FilePlus" Width="15" Height="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="New file" />
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Command="{Binding NewTaskFolderCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    ToolTip="Create a new folder in the selected task folder and link it to this task.">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="FolderPlus" Width="15" Height="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="New folder" />
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="4"
+                                    Command="{Binding LinkExistingFileCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    ToolTip="Link an existing project file to this task.">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="LinkPlus" Width="15" Height="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="Link" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0"
+                                    Command="{Binding ImportExternalFileCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    ToolTip="Copy an external file into the task folder and link it to this task.">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="FileImport" Width="15" Height="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="Import" />
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Command="{Binding RenameRelatedFileCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    ToolTip="Rename the selected project file or folder and keep task links updated.">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="RenameBox" Width="15" Height="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="Rename" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <Border Style="{StaticResource ReachItMetricCardStyle}"
+                                Padding="8"
+                                MinHeight="120"
+                                MaxHeight="260"
+                                Margin="0,0,0,10">
+                            <TreeView x:Name="RelatedFilesTree"
+                                      ItemsSource="{Binding RelatedFiles}"
+                                      ItemTemplate="{StaticResource TaskRelatedFileTemplate}"
+                                      SelectedItemChanged="RelatedFilesTree_SelectedItemChanged"
+                                      BorderThickness="0"
+                                      Background="Transparent"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <TreeView.Resources>
+                                    <Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                                        <Setter Property="IsExpanded" Value="True" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    </Style>
+                                </TreeView.Resources>
+                            </TreeView>
+                        </Border>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0"
+                                    Command="{Binding OpenRelatedFileCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    ToolTip="Open the selected related file or folder.">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="OpenInNew" Width="15" Height="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="Open selected" />
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Command="{Binding RevealRelatedFileCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    ToolTip="Reveal the selected related file or folder in Explorer.">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="FolderOpenOutline" Width="15" Height="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="Reveal selected" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
 
                         <TextBlock Text="{Binding DeadlineValidationMessage}"
                                    Foreground="{StaticResource NeonPinkBrush}"

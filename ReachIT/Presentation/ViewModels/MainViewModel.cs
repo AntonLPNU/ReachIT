@@ -190,6 +190,7 @@ public sealed class MainViewModel : ViewModelBase
         };
         MainDashboardViewModel.RequestOpenStatistics += (_, _) => Navigate(StatisticsViewModel);
         MainDashboardViewModel.RequestRefreshTree += async (_, _) => await RefreshTreeAsync().ConfigureAwait(true);
+        TaskManagerViewModel.RequestProjectTreeRefresh += async (_, _) => await RefreshTreeAsync().ConfigureAwait(true);
 
         _navigationService.Navigated += OnNavigated;
         _navigationService.NavigationStateChanged += (_, _) =>

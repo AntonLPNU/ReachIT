@@ -47,6 +47,10 @@ public sealed class AppHost
             GetRequiredService<IFileSystemProjectExplorerService>(),
             GetRequiredService<IWorkItemRepository>(),
             GetRequiredService<ITaskService>()));
+        RegisterSingleton<ITaskBoardSyncService>(new TaskBoardSyncService(
+            GetRequiredService<IProjectService>(),
+            GetRequiredService<ITaskService>()));
+        RegisterSingleton<IProjectReportService>(new ProjectReportService(GetRequiredService<ITaskService>()));
         RegisterSingleton<IDeveloperProjectGeneratorService>(new DeveloperProjectGeneratorService(
             GetRequiredService<IProjectService>(),
             GetRequiredService<IDialogService>(),
@@ -114,17 +118,22 @@ public sealed class AppHost
             GetRequiredService<IExternalResourceService>(),
             GetRequiredService<IFocusModeService>(),
             GetRequiredService<IProjectProgressService>(),
-            GetRequiredService<IGitService>()));
+            GetRequiredService<IGitService>(),
+            GetRequiredService<IDialogService>(),
+            GetRequiredService<IProjectReportService>()));
         RegisterSingleton(new ProjectInfoViewModel());
         RegisterSingleton(new FileViewModel(
             GetRequiredService<IProjectService>(),
             GetRequiredService<ITaskService>(),
+            GetRequiredService<ITaskBoardSyncService>(),
             GetRequiredService<IFileInspectionService>()));
         RegisterSingleton(new PlanningViewModel(GetRequiredService<ITaskService>()));
         RegisterSingleton(new VersionsViewModel(GetRequiredService<IDatabaseService>()));
         RegisterSingleton(new TaskManagerViewModel(
             GetRequiredService<ITaskService>(),
-            GetRequiredService<IProjectService>()));
+            GetRequiredService<IProjectService>(),
+            GetRequiredService<IDialogService>(),
+            GetRequiredService<ITaskBoardSyncService>()));
         RegisterSingleton(new TaskDetailViewModel());
         RegisterSingleton(new StatisticsViewModel(GetRequiredService<IStatisticsService>()));
         RegisterSingleton(new SettingsViewModel(

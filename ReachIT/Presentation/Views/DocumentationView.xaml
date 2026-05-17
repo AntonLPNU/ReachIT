@@ -56,6 +56,15 @@
             <Setter Property="Padding" Value="10,7" />
             <Setter Property="Margin" Value="0,0,8,8" />
         </Style>
+
+        <Style x:Key="GuideHotkeyStyle" TargetType="{x:Type Border}">
+            <Setter Property="Background" Value="#10263A" />
+            <Setter Property="BorderBrush" Value="{StaticResource SkyAquaBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+        </Style>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -122,6 +131,25 @@
                             <TextBlock Text="Файл: де лежить реальна робота." Style="{StaticResource GuideStepStyle}" />
                         </StackPanel>
                     </Border>
+                    <Border Style="{StaticResource GuideCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Гарячі клавіші" Style="{StaticResource GuideSectionTitleStyle}" FontSize="18" />
+                            <WrapPanel Margin="0,4,0,0">
+                                <Border Style="{StaticResource GuideHotkeyStyle}">
+                                    <TextBlock Text="Ctrl+Alt+R - плаваюче лого / швидке меню" Style="{StaticResource GuideBodyStyle}" Margin="0" />
+                                </Border>
+                                <Border Style="{StaticResource GuideHotkeyStyle}">
+                                    <TextBlock Text="Ctrl+Alt+T - швидко додати задачу" Style="{StaticResource GuideBodyStyle}" Margin="0" />
+                                </Border>
+                                <Border Style="{StaticResource GuideHotkeyStyle}">
+                                    <TextBlock Text="Ctrl+Alt+F - фокус-режим" Style="{StaticResource GuideBodyStyle}" Margin="0" />
+                                </Border>
+                                <Border Style="{StaticResource GuideHotkeyStyle}">
+                                    <TextBlock Text="Ctrl+Alt+M - головне вікно" Style="{StaticResource GuideBodyStyle}" Margin="0" />
+                                </Border>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2">
@@ -175,6 +203,12 @@
                             <TextBlock Text="Черга і пріоритет" Style="{StaticResource GuideSubTitleStyle}" />
                             <TextBlock Text="Поле позиції в черзі допомагає впорядкувати роботу. Менше число означає, що задачу треба зробити раніше. Спочатку став у чергу блокери: без них інші задачі не мають сенсу."
                                        Style="{StaticResource GuideStepStyle}" />
+
+                            <TextBlock Text="Підтвердження виконання" Style="{StaticResource GuideSubTitleStyle}" />
+                            <TextBlock Text="Людина може підтвердити виконання кількома способами: натиснути чекбокс на картці задачі, чекбокс у дереві задач, кнопку «Позначити виконаною», або поставити «Виконано» в деталях і натиснути Apply. Перед закриттям ReachIT показує підтвердження: критерій готовності з опису, відкриті підзадачі та кількість пов’язаних файлів/папок."
+                                       Style="{StaticResource GuideStepStyle}" />
+                            <TextBlock Text="Найкраща практика: закривай задачу тільки коли опис відповідає результату, потрібні файли додані в Related files, підзадачі закриті або свідомо лишені на іншу задачу, а важливі зміни за потреби зафіксовані Git commit."
+                                       Style="{StaticResource GuideMutedStyle}" />
 
                             <TextBlock Text="Видалення і завершення" Style="{StaticResource GuideSubTitleStyle}" />
                             <TextBlock Text="Щоб завершити задачу, вибери її і постав статус Done. Щоб прибрати зайве, виділи задачу й натисни «Видалити вибрану». Перед видаленням перевір, чи вона не є батьківською для потрібних підзадач."

@@ -5,11 +5,11 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
 using System.Collections.ObjectModel;
-using Microsoft.VisualBasic;
 using ReachIT.Application.Contracts;
 using ReachIT.Application.Security;
 using ReachIT.Domain.Models;
 using ReachIT.Presentation.Commands;
+using ReachIT.Presentation.Windows;
 
 namespace ReachIT.Presentation.ViewModels;
 
@@ -17,6 +17,7 @@ public sealed class FileViewModel : ViewModelBase
 {
     private readonly IProjectService _projectService;
     private readonly ITaskService _taskService;
+    private readonly ITaskBoardSyncService _taskBoardSyncService;
     private readonly IFileInspectionService _fileInspectionService;
     private string _selectedNodeName = "Files";
     private string _selectedRelativePath = string.Empty;
@@ -55,10 +56,12 @@ public sealed class FileViewModel : ViewModelBase
     public FileViewModel(
         IProjectService projectService,
         ITaskService taskService,
+        ITaskBoardSyncService taskBoardSyncService,
         IFileInspectionService fileInspectionService)
     {
         _projectService = projectService;
         _taskService = taskService;
+        _taskBoardSyncService = taskBoardSyncService;
         _fileInspectionService = fileInspectionService;
 
         OpenFileCommand = new RelayCommand(_ => OpenFile());
@@ -557,40 +560,35 @@ public sealed class FileViewModel : ViewModelBase
             return;
         }
 
-        var attachMode = Interaction.InputBox(
-            "Type task title to create and attach a new task. Leave empty to attach existing by number from the list.",
-            "Attach Task",
-            string.Empty);
-
-        if (!string.IsNullOrWhiteSpace(attachMode))
-        {
-            await _taskService.CreateAndAttachTaskToFileAsync(attachMode, FullPath).ConfigureAwait(true);
-            await LoadAttachedTasksAsync(FullPath).ConfigureAwait(true);
-            return;
-        }
-
         var allTasks = await _taskService.GetTasksAsync().ConfigureAwait(true);
-        if (allTasks.Count == 0)
+        var owner = System.Windows.Application.Current.Windows
+            .OfType<Window>()
+            .FirstOrDefault(window => window.IsActive);
+        var dialog = new AttachTaskWindow(FullPath, allTasks)
         {
-            MessageBox.Show("There are no tasks yet. Enter a title to create one.", "ReachIT", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
+            Owner = owner
+        };
 
-        var options = string.Join(Environment.NewLine, allTasks.Select((task, index) => $"{index + 1}. {task.Title}"));
-        var selectedNumberText = Interaction.InputBox(
-            $"Choose task number to attach:{Environment.NewLine}{options}",
-            "Attach Existing Task",
-            "1");
-
-        if (!int.TryParse(selectedNumberText, out var selectedNumber)
-            || selectedNumber < 1
-            || selectedNumber > allTasks.Count)
+        if (dialog.ShowDialog() != true || dialog.Result is not { } result)
         {
             return;
         }
 
-        var selectedTask = allTasks[selectedNumber - 1];
-        await _taskService.AttachTaskToFileAsync(selectedTask.Id, FullPath).ConfigureAwait(true);
+        if (result.CreateNewTask)
+        {
+            await _taskService.CreateAndAttachTaskToFileAsync(
+                    result.Title,
+                    result.Description,
+                    result.DueDate,
+                    FullPath)
+                .ConfigureAwait(true);
+        }
+        else if (result.ExistingTaskId.HasValue)
+        {
+            await _taskService.AttachTaskToFileAsync(result.ExistingTaskId.Value, FullPath).ConfigureAwait(true);
+        }
+
+        await _taskBoardSyncService.ExportCurrentProjectAsync().ConfigureAwait(true);
         await LoadAttachedTasksAsync(FullPath).ConfigureAwait(true);
     }
 

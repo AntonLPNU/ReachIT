@@ -189,7 +189,7 @@
                             </ItemsControl>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="2" VerticalAlignment="Bottom">
+                        <StackPanel Grid.Column="2" VerticalAlignment="Top">
                             <Button Command="{Binding NewTaskCommand}" Margin="0,0,0,8">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                     <iconPacks:PackIconMaterial Kind="PlusCircle" Width="16" Height="16" Margin="0,0,8,0" />
@@ -203,6 +203,15 @@
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                     <iconPacks:PackIconMaterial Kind="FormatListBulleted" Width="16" Height="16" Margin="0,0,8,0" />
                                     <TextBlock Text="{DynamicResource Dashboard.OpenActiveTasks}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding ExportProjectReportCommand}"
+                                    Style="{StaticResource ReachItSecondaryButtonStyle}"
+                                    Margin="0,8,0,0"
+                                    ToolTip="Generate an HTML project report with title page, contents, tasks, statuses, and linked files.">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="FileDocumentOutline" Width="16" Height="16" Margin="0,0,8,0" />
+                                    <TextBlock Text="Сформувати звіт" />
                                 </StackPanel>
                             </Button>
                         </StackPanel>

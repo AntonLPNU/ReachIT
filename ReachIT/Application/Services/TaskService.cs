@@ -3,6 +3,7 @@ using System.IO;
 using Microsoft.EntityFrameworkCore;
 using ReachIT.Application.Contracts;
 using ReachIT.Domain.Models;
+using ReachIT.Infrastructure.Persistence;
 
 namespace ReachIT.Application.Services;
 
@@ -126,7 +127,14 @@ public sealed class TaskService : ITaskService
         var existing = await db.Tasks.FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
         if (existing is not null)
         {
-            existing.AttachedFilePath = NormalizePath(filePath);
+            var normalizedPath = NormalizePath(filePath);
+            existing.AttachedFilePath = normalizedPath;
+            var projectId = await ResolveProjectIdForPathAsync(db, normalizedPath, cancellationToken).ConfigureAwait(false);
+            if (projectId.HasValue)
+            {
+                await AddTaskFileLinkAsync(db, projectId.Value, taskId, normalizedPath, Directory.Exists(normalizedPath), "Attach", cancellationToken)
+                    .ConfigureAwait(false);
+            }
             
             db.TaskHistoryEntries.Add(new TaskHistoryEntry
             {
@@ -141,20 +149,206 @@ public sealed class TaskService : ITaskService
         }
     }
 
+    public async Task LinkTaskFileAsync(Guid projectId, Guid taskId, string filePath, bool isDirectory, string source = "Manual", CancellationToken cancellationToken = default)
+    {
+        if (projectId == Guid.Empty || taskId == Guid.Empty || string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
+        await using var db = _databaseService.CreateDbContext();
+        var normalizedPath = NormalizePath(filePath);
+        await AddTaskFileLinkAsync(db, projectId, taskId, normalizedPath, isDirectory, source, cancellationToken)
+            .ConfigureAwait(false);
+
+        var task = await db.Tasks.FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken).ConfigureAwait(false);
+        if (task is not null && string.IsNullOrWhiteSpace(task.AttachedFilePath))
+        {
+            task.AttachedFilePath = normalizedPath;
+        }
+
+        db.TaskHistoryEntries.Add(new TaskHistoryEntry
+        {
+            Id = Guid.NewGuid(),
+            TaskItemId = taskId,
+            ChangeType = "FileLinked",
+            ChangedAtUtc = DateTime.UtcNow,
+            Notes = $"Linked file: {filePath}"
+        });
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<TaskFileLink>> GetTaskFileLinksAsync(Guid taskId, bool includeDescendants = false, CancellationToken cancellationToken = default)
+    {
+        if (taskId == Guid.Empty)
+        {
+            return [];
+        }
+
+        await using var db = _databaseService.CreateDbContext();
+        var taskIds = new HashSet<Guid> { taskId };
+        if (includeDescendants)
+        {
+            var allTasks = await db.Tasks.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
+            AddDescendantTaskIds(taskId, allTasks, taskIds);
+        }
+
+        return await db.TaskFileLinks
+            .AsNoTracking()
+            .Where(x => taskIds.Contains(x.TaskItemId))
+            .OrderBy(x => x.LinkedAtUtc)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task MoveLinkedPathAsync(Guid projectId, string oldPath, string newPath, bool isDirectory, CancellationToken cancellationToken = default)
+    {
+        if (projectId == Guid.Empty || string.IsNullOrWhiteSpace(oldPath) || string.IsNullOrWhiteSpace(newPath))
+        {
+            return;
+        }
+
+        await using var db = _databaseService.CreateDbContext();
+        var normalizedOld = NormalizePath(oldPath);
+        var normalizedNew = NormalizePath(newPath);
+        var oldPrefix = normalizedOld.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var newPrefix = normalizedNew.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        var links = await db.TaskFileLinks
+            .Where(x => x.ProjectId == projectId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (var link in links)
+        {
+            if (string.Equals(link.FilePath, normalizedOld, StringComparison.OrdinalIgnoreCase))
+            {
+                link.FilePath = normalizedNew;
+                link.IsDirectory = isDirectory;
+            }
+            else if (isDirectory && link.FilePath.StartsWith(oldPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                link.FilePath = newPrefix + link.FilePath[oldPrefix.Length..];
+            }
+        }
+
+        var tasks = await db.Tasks
+            .Where(x => x.AttachedFilePath != null && x.AttachedFilePath != string.Empty)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (var task in tasks)
+        {
+            if (string.Equals(task.AttachedFilePath, normalizedOld, StringComparison.OrdinalIgnoreCase))
+            {
+                task.AttachedFilePath = normalizedNew;
+            }
+            else if (isDirectory && task.AttachedFilePath is not null && task.AttachedFilePath.StartsWith(oldPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                task.AttachedFilePath = newPrefix + task.AttachedFilePath[oldPrefix.Length..];
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<TaskItem> CreateAndAttachTaskToFileAsync(string title, string filePath, CancellationToken cancellationToken = default)
+    {
+        return await CreateAndAttachTaskToFileAsync(title, "Task attached from file view", DateTime.Now.AddDays(1), filePath, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<TaskItem> CreateAndAttachTaskToFileAsync(string title, string description, DateTime? dueDateLocal, string filePath, CancellationToken cancellationToken = default)
     {
         var task = new TaskItem
         {
             Id = Guid.NewGuid(),
             Title = string.IsNullOrWhiteSpace(title) ? "New Task" : title.Trim(),
-            Description = "Task attached from file view",
-            DueDateUtc = DateTime.UtcNow.AddDays(1),
+            Description = string.IsNullOrWhiteSpace(description) ? "Task attached from file view" : description.Trim(),
+            DueDateUtc = dueDateLocal?.Date.ToUniversalTime(),
             IsCompleted = false,
             AttachedFilePath = NormalizePath(filePath)
         };
 
         await AddTaskAsync(task, cancellationToken).ConfigureAwait(false);
+        await using (var db = _databaseService.CreateDbContext())
+        {
+            var projectId = await ResolveProjectIdForPathAsync(db, task.AttachedFilePath, cancellationToken).ConfigureAwait(false);
+            if (projectId.HasValue)
+            {
+                await AddTaskFileLinkAsync(db, projectId.Value, task.Id, task.AttachedFilePath, Directory.Exists(task.AttachedFilePath), "CreateAndAttach", cancellationToken)
+                    .ConfigureAwait(false);
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+
         return task;
+    }
+
+    private static async Task<Guid?> ResolveProjectIdForPathAsync(ReachItDbContext db, string filePath, CancellationToken cancellationToken)
+    {
+        var normalizedPath = NormalizePath(filePath);
+        var projects = await db.Projects.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
+        var project = projects
+            .Where(p => !string.IsNullOrWhiteSpace(p.ProjectDirectoryPath))
+            .Where(p => IsInside(p.ProjectDirectoryPath, normalizedPath))
+            .OrderByDescending(p => p.ProjectDirectoryPath.Length)
+            .FirstOrDefault();
+
+        return project?.Id;
+    }
+
+    private static async Task AddTaskFileLinkAsync(ReachItDbContext db, Guid projectId, Guid taskId, string filePath, bool isDirectory, string source, CancellationToken cancellationToken)
+    {
+        var normalizedPath = NormalizePath(filePath);
+        var exists = await db.TaskFileLinks.AnyAsync(
+            x => x.ProjectId == projectId && x.TaskItemId == taskId && x.FilePath == normalizedPath,
+            cancellationToken).ConfigureAwait(false);
+
+        if (exists)
+        {
+            return;
+        }
+
+        db.TaskFileLinks.Add(new TaskFileLink
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            TaskItemId = taskId,
+            FilePath = normalizedPath,
+            IsDirectory = isDirectory,
+            LinkedAtUtc = DateTime.UtcNow,
+            LinkSource = source
+        });
+    }
+
+    private static void AddDescendantTaskIds(Guid parentId, IReadOnlyList<TaskItem> allTasks, HashSet<Guid> ids)
+    {
+        foreach (var child in allTasks.Where(x => x.ParentTaskId == parentId))
+        {
+            if (!ids.Add(child.Id))
+            {
+                continue;
+            }
+
+            AddDescendantTaskIds(child.Id, allTasks, ids);
+        }
+    }
+
+    private static bool IsInside(string rootPath, string path)
+    {
+        try
+        {
+            var root = Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var target = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return target.Equals(root, StringComparison.OrdinalIgnoreCase) ||
+                   target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static string NormalizePath(string path)

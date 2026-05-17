@@ -37,6 +37,7 @@ public sealed class DatabaseService : IDatabaseService
         EnsureProjectActivitySettingsColumns();
         EnsureActivitySettingsColumns();
         EnsureTaskQueueColumns();
+        EnsureTaskFileLinkTables();
         EnsureAccountTables();
         EnsureWorkProgressTables();
         EnsureActivityTables();
@@ -207,6 +208,33 @@ public sealed class DatabaseService : IDatabaseService
         AddColumnIfMissing(connection, "Tasks", "StartedAtUtc", "TEXT NULL");
         AddColumnIfMissing(connection, "Tasks", "CompletedAtUtc", "TEXT NULL");
         ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_Tasks_IsCompleted_Priority ON Tasks (IsCompleted, Priority);");
+    }
+
+    private static void EnsureTaskFileLinkTables()
+    {
+        if (!File.Exists(ResolvedDatabasePath))
+        {
+            return;
+        }
+
+        using var connection = new SqliteConnection($"Data Source={ResolvedDatabasePath}");
+        connection.Open();
+
+        ExecuteNonQuery(connection, """
+            CREATE TABLE IF NOT EXISTS TaskFileLinks (
+                Id TEXT NOT NULL CONSTRAINT PK_TaskFileLinks PRIMARY KEY,
+                ProjectId TEXT NOT NULL,
+                TaskItemId TEXT NOT NULL,
+                FilePath TEXT NOT NULL,
+                IsDirectory INTEGER NOT NULL DEFAULT 0,
+                LinkedAtUtc TEXT NOT NULL,
+                LinkSource TEXT NOT NULL DEFAULT 'Manual',
+                CONSTRAINT FK_TaskFileLinks_Tasks_TaskItemId FOREIGN KEY (TaskItemId) REFERENCES Tasks (Id) ON DELETE CASCADE
+            );
+            """);
+
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_TaskFileLinks_ProjectId_TaskItemId ON TaskFileLinks (ProjectId, TaskItemId);");
+        ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_TaskFileLinks_ProjectId_FilePath ON TaskFileLinks (ProjectId, FilePath);");
     }
 
     private static void EnsureAccountTables()

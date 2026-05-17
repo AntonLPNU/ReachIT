@@ -33,6 +33,14 @@ public partial class TaskManagerView : UserControl
         }
     }
 
+    private void RelatedFilesTree_SelectedItemChanged(object sender, System.Windows.RoutedPropertyChangedEventArgs<object> e)
+    {
+        if (DataContext is TaskManagerViewModel viewModel && e.NewValue is TaskRelatedFileNode node)
+        {
+            viewModel.SelectedRelatedFile = node;
+        }
+    }
+
     private void ExportDiagram_Click(object sender, System.Windows.RoutedEventArgs e)
     {
         if (DataContext is not TaskManagerViewModel viewModel)

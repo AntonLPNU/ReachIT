@@ -22,6 +22,8 @@ public sealed class MainDashboardViewModel : ViewModelBase
     private readonly IFocusModeService _focusModeService;
     private readonly IProjectProgressService _projectProgressService;
     private readonly IGitService _gitService;
+    private readonly IDialogService _dialogService;
+    private readonly IProjectReportService _projectReportService;
 
     private ProjectDashboardData _dashboardData = new();
     private string _statusText = "No project opened";
@@ -76,7 +78,9 @@ public sealed class MainDashboardViewModel : ViewModelBase
         IExternalResourceService externalResourceService,
         IFocusModeService focusModeService,
         IProjectProgressService projectProgressService,
-        IGitService gitService)
+        IGitService gitService,
+        IDialogService dialogService,
+        IProjectReportService projectReportService)
     {
         _projectService = projectService;
         _taskService = taskService;
@@ -85,6 +89,8 @@ public sealed class MainDashboardViewModel : ViewModelBase
         _focusModeService = focusModeService;
         _projectProgressService = projectProgressService;
         _gitService = gitService;
+        _dialogService = dialogService;
+        _projectReportService = projectReportService;
 
         RefreshCommand = new AsyncCommand(_ => LoadAsync());
         CreateFirstTaskCommand = new AsyncCommand(_ => CreateTaskAsync());
@@ -106,6 +112,7 @@ public sealed class MainDashboardViewModel : ViewModelBase
         GitStageAllCommand = new AsyncCommand(_ => GitStageAllAsync());
         GitCommitCommand = new AsyncCommand(_ => GitCommitAsync());
         OpenProjectFolderCommand = new RelayCommand(_ => OpenProjectFolder());
+        ExportProjectReportCommand = new AsyncCommand(_ => ExportProjectReportAsync());
     }
 
     public event EventHandler? RequestOpenSidePanel;
@@ -282,6 +289,7 @@ public sealed class MainDashboardViewModel : ViewModelBase
     public ICommand GitStageAllCommand { get; }
     public ICommand GitCommitCommand { get; }
     public ICommand OpenProjectFolderCommand { get; }
+    public ICommand ExportProjectReportCommand { get; }
 
     public double WorkItemProgressPercent
     {
@@ -556,6 +564,40 @@ public sealed class MainDashboardViewModel : ViewModelBase
     private async Task GitInitAsync()
     {
         await RunGitAndShowSummaryAsync(["init"], "Git repository initialized.").ConfigureAwait(true);
+    }
+
+    private async Task ExportProjectReportAsync()
+    {
+        var project = _projectService.CurrentProject;
+        if (project is null)
+        {
+            StatusText = "Open a project before exporting a report.";
+            return;
+        }
+
+        var outputPath = _dialogService.ShowSaveFileDialog("HTML report (*.html)|*.html");
+        if (string.IsNullOrWhiteSpace(outputPath))
+        {
+            return;
+        }
+
+        if (!outputPath.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+        {
+            outputPath += ".html";
+        }
+
+        var reportPath = await _projectReportService.ExportHtmlReportAsync(project, outputPath).ConfigureAwait(true);
+        if (string.IsNullOrWhiteSpace(reportPath))
+        {
+            return;
+        }
+
+        StatusText = $"Project report exported: {Path.GetFileName(reportPath)}";
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = reportPath,
+            UseShellExecute = true
+        });
     }
 
     private async Task GitStatusAsync()

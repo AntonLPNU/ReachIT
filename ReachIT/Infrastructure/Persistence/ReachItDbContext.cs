@@ -19,6 +19,7 @@ public sealed class ReachItDbContext : DbContext
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<TaskCategory> TaskCategories => Set<TaskCategory>();
     public DbSet<TaskTag> TaskTags => Set<TaskTag>();
+    public DbSet<TaskFileLink> TaskFileLinks => Set<TaskFileLink>();
     public DbSet<TaskHistoryEntry> TaskHistoryEntries => Set<TaskHistoryEntry>();
     public DbSet<AppSettings> AppSettings => Set<AppSettings>();
     public DbSet<FocusSession> FocusSessions => Set<FocusSession>();
@@ -43,6 +44,7 @@ public sealed class ReachItDbContext : DbContext
         modelBuilder.Entity<TaskItem>().HasKey(x => x.Id);
         modelBuilder.Entity<TaskCategory>().HasKey(x => x.Id);
         modelBuilder.Entity<TaskTag>().HasKey(x => x.Id);
+        modelBuilder.Entity<TaskFileLink>().HasKey(x => x.Id);
         modelBuilder.Entity<TaskHistoryEntry>().HasKey(x => x.Id);
         modelBuilder.Entity<AppSettings>().HasKey(x => x.Id);
         modelBuilder.Entity<FocusSession>().HasKey(x => x.Id);
@@ -92,6 +94,15 @@ public sealed class ReachItDbContext : DbContext
             .WithOne()
             .HasForeignKey(x => x.TaskItemId)
             .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<TaskFileLink>().Property(x => x.FilePath).HasMaxLength(2500).IsRequired();
+        modelBuilder.Entity<TaskFileLink>().Property(x => x.LinkSource).HasMaxLength(120);
+        modelBuilder.Entity<TaskFileLink>()
+            .HasOne(x => x.TaskItem)
+            .WithMany(x => x.FileLinks)
+            .HasForeignKey(x => x.TaskItemId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<TaskFileLink>().HasIndex(x => new { x.ProjectId, x.TaskItemId });
+        modelBuilder.Entity<TaskFileLink>().HasIndex(x => new { x.ProjectId, x.FilePath });
 
         modelBuilder.Entity<WorkItem>().Property(x => x.Title).HasMaxLength(250).IsRequired();
         modelBuilder.Entity<WorkItem>().Property(x => x.Description).HasMaxLength(4000);
